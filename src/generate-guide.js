@@ -1,0 +1,256 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Generate HTML with environment variables
+function generateSetupGuide() {
+  const clientId = process.env.CLIENT_ID || 'YOUR_CLIENT_ID';
+  const guildId = process.env.GUILD_ID || 'YOUR_GUILD_ID';
+  
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Setup Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #5865F2;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #5865F2;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .invite-link {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            font-family: monospace;
+            margin: 20px 0;
+            border: 2px solid #5865F2;
+        }
+        .button {
+            background: #5865F2;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-block;
+            text-decoration: none;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #4752c4;
+        }
+        .step {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .step-number {
+            background: #5865F2;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Discord Bot Setup Guide</h1>
+        
+        <div class="info-box">
+            <strong>📋 Your Bot Information:</strong><br>
+            Client ID: <code>${clientId}</code><br>
+            Guild ID: <code>${guildId}</code>
+        </div>
+
+        ${clientId === 'YOUR_CLIENT_ID' ? `
+        <div class="warning">
+            <strong>⚠️ Configuration Needed!</strong><br>
+            Please update your <code>.env</code> file with your actual Discord bot credentials before proceeding.
+        </div>
+        ` : ''}
+
+        <h2>Step 1: Use Invite Link</h2>
+        <p>Click the button below to invite the bot to your server (requires Manage Server permission):</p>
+        
+        <div style="text-align: center;">
+            <a href="https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2147483648&scope=bot%20applications.commands" 
+               class="button" 
+               target="_blank"
+               ${clientId === 'YOUR_CLIENT_ID' ? 'onclick="alert(\'Please configure your .env file first!\'); return false;"' : ''}>
+                🚀 Invite Bot to Server
+            </a>
+        </div>
+
+        <div class="invite-link">
+            <strong>Full Invite Link:</strong><br>
+            https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2147483648&scope=bot%20applications.commands
+        </div>
+
+        <h2>Step 2: Configure Bot Permissions</h2>
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Go to Discord Developer Portal</strong><br>
+            Open <a href="https://discord.com/developers/applications/${clientId}/bot" target="_blank">your application settings page</a>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Enable Privileged Gateway Intents</strong><br>
+            On the Bot page, scroll down to find "Privileged Gateway Intents" and enable:
+            <ul>
+                <li>✅ MESSAGE CONTENT INTENT</li>
+                <li>✅ SERVER MEMBERS INTENT (optional)</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Save Changes</strong><br>
+            Click the "Save Changes" button
+        </div>
+
+        <h2>Step 3: Get Your Discord Token</h2>
+        <div class="info-box">
+            <strong>🔑 How to get your Discord Bot Token:</strong>
+            <ol>
+                <li>Go to <a href="https://discord.com/developers/applications/${clientId}/bot" target="_blank">Bot page</a></li>
+                <li>Click "Reset Token" button</li>
+                <li>Copy the new Token (⚠️ Keep it secret!)</li>
+                <li>Update <code>DISCORD_TOKEN</code> in your <code>.env</code> file</li>
+            </ol>
+        </div>
+
+        <h2>Step 4: Configure Environment Variables</h2>
+        <div class="step">
+            <p>Create or update your <code>.env</code> file with:</p>
+            <div class="invite-link">
+DISCORD_TOKEN=your_actual_bot_token_here<br>
+CLIENT_ID=${clientId}<br>
+GUILD_ID=${guildId}
+            </div>
+        </div>
+
+        <h2>Step 5: Start the Bot</h2>
+        <p>Run these commands in your terminal:</p>
+        <div class="invite-link">
+            <code>npm run register</code> - Register slash commands<br>
+            <code>npm start</code> - Start the bot
+        </div>
+
+        <h2>🎉 Success Screen</h2>
+        <p>When everything is configured correctly, you should see:</p>
+        <div class="step">
+            ✅ Bot is online!<br>
+            🤖 Logged in as: [Your Bot Name]#0000<br>
+            📊 Joined 1 server(s)<br>
+            ⏰ Auto-execution schedule set, will execute every 30 days
+        </div>
+
+        <h2>🚀 Deploy to Cloud (Render)</h2>
+        <div class="step">
+            <strong>For 24/7 operation, deploy to Render:</strong>
+            <ol>
+                <li>Push your code to GitHub (make sure .env is in .gitignore)</li>
+                <li>Go to <a href="https://render.com" target="_blank">render.com</a> and sign up</li>
+                <li>Click "New +" → "Web Service"</li>
+                <li>Connect your GitHub repository</li>
+                <li>Configure:
+                    <ul>
+                        <li>Name: discord-active-badge-bot</li>
+                        <li>Environment: Node</li>
+                        <li>Build Command: <code>npm install</code></li>
+                        <li>Start Command: <code>npm start</code></li>
+                    </ul>
+                </li>
+                <li>Add Environment Variables:
+                    <ul>
+                        <li><code>DISCORD_TOKEN</code> = your bot token</li>
+                        <li><code>CLIENT_ID</code> = ${clientId}</li>
+                        <li><code>GUILD_ID</code> = ${guildId}</li>
+                    </ul>
+                </li>
+                <li>Click "Create Web Service"</li>
+            </ol>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <strong>💡 Tips:</strong><br>
+            • The bot needs at least one channel in the server where it can send messages<br>
+            • Ensure the bot has "Send Messages" and "Use Application Commands" permissions<br>
+            • After completion, you can test by typing <code>/ping</code> in Discord<br>
+            • For 24/7 operation, deploy to a cloud service like Render or Railway
+        </div>
+
+        <div class="info-box" style="background: #e7f3ff; border-left-color: #2196F3;">
+            <strong>📖 Need More Help?</strong><br>
+            Check out the <a href="https://github.com/HenryLok0/Auto-Discord-Developer-Badge" target="_blank">GitHub repository</a> for detailed documentation and troubleshooting.
+        </div>
+    </div>
+</body>
+</html>`;
+
+  return html;
+}
+
+// Write the generated HTML to file
+const htmlContent = generateSetupGuide();
+const outputPath = join(__dirname, '..', 'invite-bot.html');
+fs.writeFileSync(outputPath, htmlContent, 'utf8');
+
+console.log('✅ Setup guide generated successfully!');
+console.log(`📄 File: ${outputPath}`);
+console.log(`🔗 Client ID: ${process.env.CLIENT_ID || 'Not configured'}`);
+console.log(`🔗 Guild ID: ${process.env.GUILD_ID || 'Not configured'}`);

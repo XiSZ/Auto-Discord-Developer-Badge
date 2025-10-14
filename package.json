@@ -1,0 +1,25 @@
+{
+  "name": "auto-discord-developer-badge",
+  "version": "1.0.0",
+  "description": "Automatically maintain Discord Active Developer Badge eligibility",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "npm run generate-guide && node src/index.js",
+    "register": "node src/register-commands.js",
+    "dev": "node --watch src/index.js",
+    "generate-guide": "node src/generate-guide.js",
+    "postinstall": "node src/setup.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "active-developer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.1"
+  }
+}
