@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { exec } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { existsSync } from "fs";
 
 dotenv.config();
 
@@ -111,15 +112,18 @@ function checkAndExecute() {
 // Rich presence rotation
 let presenceIndex = 0;
 const presenceMessages = [
-  { type: ActivityType.Watching, name: "over your Active Developer status" },
-  { type: ActivityType.Playing, name: "with Discord API" },
-  { type: ActivityType.Listening, name: "to user commands" },
+  {
+    type: ActivityType.Watching,
+    name: "Watching over your Active Developer status",
+  },
+  { type: ActivityType.Playing, name: "Playing with Discord API" },
+  { type: ActivityType.Listening, name: "Listening to user commands" },
   {
     type: ActivityType.Watching,
     name: `Currently active in ${client.guilds?.cache.size || 0} servers`,
   },
-  { type: ActivityType.Playing, name: "Auto-Maintenance Mode" },
-  { type: ActivityType.Competing, name: "the uptime challenge" },
+  { type: ActivityType.Playing, name: "Playing Auto-Maintenance Mode" },
+  { type: ActivityType.Competing, name: "Competing in the uptime challenge" },
 ];
 
 function updateRichPresence() {
@@ -185,6 +189,26 @@ function setupAutoExecution() {
 // Open invite-bot.html in default browser
 function openInviteBotGuide() {
   const htmlPath = join(__dirname, "..", "invite-bot.html");
+  const guideUrl =
+    process.env.GUIDE_URL ||
+    "https://raw.githubusercontent.com/XiSZ/Auto-Discord-Developer-Badge/main/invite-bot.html";
+
+  // Detect headless/hosted environments where opening a browser is pointless
+  const isHeadless =
+    process.env.CI === "true" ||
+    !!process.env.CODESPACES ||
+    !!process.env.SSH_CONNECTION ||
+    !!process.env.CONTAINER ||
+    (process.platform === "linux" && !process.env.DISPLAY) ||
+    !process.stdout.isTTY;
+
+  // If file is not present on this machine or we are headless, just print a remote-friendly link
+  const guideExists = existsSync(htmlPath);
+  if (!guideExists || isHeadless) {
+    const locationHint = guideExists ? `file://${htmlPath}` : guideUrl;
+    console.log("💡 Setup guide available at:", locationHint);
+    return;
+  }
 
   // Detect platform and use appropriate command
   const command =
@@ -196,7 +220,7 @@ function openInviteBotGuide() {
 
   exec(command, (error) => {
     if (error) {
-      console.log("💡 Setup guide available at: invite-bot.html");
+      console.log("💡 Setup guide available at:", guideUrl);
     } else {
       console.log("🌐 Opening setup guide in your browser...");
     }
