@@ -113,7 +113,7 @@ let presenceIndex = 0;
 const presenceMessages = [
   { type: ActivityType.Watching, name: "over your Active Developer status" },
   { type: ActivityType.Playing, name: "with Discord API" },
-  { type: ActivityType.Listening, name: "commands" },
+  { type: ActivityType.Listening, name: "to user commands" },
   {
     type: ActivityType.Watching,
     name: `Currently active in ${client.guilds?.cache.size || 0} servers`,
