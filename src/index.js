@@ -1,8 +1,8 @@
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
-import dotenv from 'dotenv';
-import { exec } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { Client, GatewayIntentBits, REST, Routes } from "discord.js";
+import dotenv from "dotenv";
+import { exec } from "child_process";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 dotenv.config();
 
@@ -10,15 +10,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-  ],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
 
 // Auto-execution interval (30 days)
 const AUTO_EXECUTE_INTERVAL_DAYS = 30;
-const AUTO_EXECUTE_INTERVAL_MS = AUTO_EXECUTE_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+const AUTO_EXECUTE_INTERVAL_MS =
+  AUTO_EXECUTE_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 
 // Maximum safe value for Node.js setTimeout (about 24.8 days)
 const MAX_TIMEOUT = 2147483647;
@@ -34,30 +32,40 @@ async function autoExecuteCommand() {
   try {
     const guild = await client.guilds.fetch(process.env.GUILD_ID);
     const channels = await guild.channels.fetch();
-    
+
     // Find the first text channel
     const textChannel = channels.find(
-      channel => channel.type === 0 && channel.permissionsFor(guild.members.me).has('SendMessages')
+      (channel) =>
+        channel.type === 0 &&
+        channel.permissionsFor(guild.members.me).has("SendMessages")
     );
 
     if (!textChannel) {
-      console.log('❌ Cannot find available text channel');
+      console.log("❌ Cannot find available text channel");
       return;
     }
 
     // Send a message to log auto-execution
-    console.log('🤖 Auto-executing ping command to maintain application active status...');
-    
+    console.log(
+      "🤖 Auto-executing ping command to maintain application active status..."
+    );
+
     await textChannel.send({
-      content: '✅ Auto-maintenance Active Developer status - Ping! Bot is working properly.',
+      content:
+        "✅ Auto-maintenance Active Developer status - Ping! Bot is working properly.",
     });
 
     lastExecutionTime = Date.now();
-    const nextExecutionDate = new Date(lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS);
-    console.log(`✅ Auto-execution completed! Next execution time: ${nextExecutionDate.toLocaleString('en-US')}`);
-    
+    const nextExecutionDate = new Date(
+      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+    );
+    console.log(
+      `✅ Auto-execution completed! Next execution time: ${nextExecutionDate.toLocaleString(
+        "en-US"
+      )}`
+    );
   } catch (error) {
-    console.error('❌ Error during auto-execution:', error);
+    console.error("❌ Error during auto-execution:", error);
   }
 }
 
@@ -65,14 +73,19 @@ async function autoExecuteCommand() {
 function checkAndExecute() {
   const now = Date.now();
   const timeSinceLastExecution = now - lastExecutionTime;
-  
+
   // Execute if more than 30 days have passed since last execution
   if (timeSinceLastExecution >= AUTO_EXECUTE_INTERVAL_MS) {
-    console.log('📅 Auto-execution time reached...');
+    console.log("📅 Auto-execution time reached...");
     autoExecuteCommand();
   } else {
-    const daysRemaining = Math.ceil((AUTO_EXECUTE_INTERVAL_MS - timeSinceLastExecution) / (24 * 60 * 60 * 1000));
-    console.log(`⏳ ${daysRemaining} day(s) remaining until next auto-execution`);
+    const daysRemaining = Math.ceil(
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastExecution) /
+        (24 * 60 * 60 * 1000)
+    );
+    console.log(
+      `⏳ ${daysRemaining} day(s) remaining until next auto-execution`
+    );
   }
 }
 
@@ -80,7 +93,7 @@ function checkAndExecute() {
 function setupAutoExecution() {
   // Execute once immediately
   setTimeout(() => {
-    console.log('🚀 First auto-execution...');
+    console.log("🚀 First auto-execution...");
     autoExecuteCommand();
   }, 60000); // Execute after 1 minute from startup
 
@@ -89,83 +102,99 @@ function setupAutoExecution() {
     checkAndExecute();
   }, CHECK_INTERVAL);
 
-  console.log(`⏰ Auto-execution schedule set, will execute every ${AUTO_EXECUTE_INTERVAL_DAYS} days`);
+  console.log(
+    `⏰ Auto-execution schedule set, will execute every ${AUTO_EXECUTE_INTERVAL_DAYS} days`
+  );
   console.log(`🔍 Checking every 24 hours if execution is needed`);
-  
-  const nextExecutionDate = new Date(lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS);
-  console.log(`📅 Next scheduled execution time: ${nextExecutionDate.toLocaleString('en-US')}`);
+
+  const nextExecutionDate = new Date(
+    lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+  );
+  console.log(
+    `📅 Next scheduled execution time: ${nextExecutionDate.toLocaleString(
+      "en-US"
+    )}`
+  );
 }
 
 // Open invite-bot.html in default browser
 function openInviteBotGuide() {
-  const htmlPath = join(__dirname, '..', 'invite-bot.html');
-  
+  const htmlPath = join(__dirname, "..", "invite-bot.html");
+
   // Detect platform and use appropriate command
-  const command = process.platform === 'win32' ? `start "" "${htmlPath}"` :
-                  process.platform === 'darwin' ? `open "${htmlPath}"` :
-                  `xdg-open "${htmlPath}"`;
-  
+  const command =
+    process.platform === "win32"
+      ? `start "" "${htmlPath}"`
+      : process.platform === "darwin"
+      ? `open "${htmlPath}"`
+      : `xdg-open "${htmlPath}"`;
+
   exec(command, (error) => {
     if (error) {
-      console.log('💡 Setup guide available at: invite-bot.html');
+      console.log("💡 Setup guide available at: invite-bot.html");
     } else {
-      console.log('🌐 Opening setup guide in your browser...');
+      console.log("🌐 Opening setup guide in your browser...");
     }
   });
 }
 
-client.once('clientReady', () => {
-  console.log('✅ Bot is online!');
+client.once("clientReady", () => {
+  console.log("✅ Bot is online!");
   console.log(`🤖 Logged in as: ${client.user.tag}`);
   console.log(`📊 Joined ${client.guilds.cache.size} server(s)`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🎯 Discord Active Developer Badge Auto-Maintenance Bot');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("🎯 Discord Active Developer Badge Auto-Maintenance Bot");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
   // Setup auto-execution schedule
   setupAutoExecution();
 });
 
-client.on('interactionCreate', async (interaction) => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'ping') {
+  if (interaction.commandName === "ping") {
     const startTime = Date.now();
     await interaction.deferReply();
-    
+
     const latency = Date.now() - startTime;
     const apiLatency = Math.round(client.ws.ping);
-    
+
     const timeSinceLastAuto = Date.now() - lastExecutionTime;
-    const daysUntilNext = Math.ceil((AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24));
-    
+    const daysUntilNext = Math.ceil(
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24)
+    );
+
     await interaction.editReply({
-      content: `🏓 Pong!\n` +
-               `⏱️ Latency: ${latency}ms\n` +
-               `💓 API Latency: ${apiLatency}ms\n` +
-               `✅ Bot is working properly\n` +
-               `📅 Days until next auto-execution: ${daysUntilNext} day(s)\n` +
-               `🎖️ Your Active Developer status has been updated!`,
+      content:
+        `🏓 Pong!\n` +
+        `⏱️ Latency: ${latency}ms\n` +
+        `💓 API Latency: ${apiLatency}ms\n` +
+        `✅ Bot is working properly\n` +
+        `📅 Days until next auto-execution: ${daysUntilNext} day(s)\n` +
+        `🎖️ Your Active Developer status has been updated!`,
     });
 
     console.log(`✅ ${interaction.user.tag} executed ping command`);
   }
 
-  if (interaction.commandName === 'purge') {
+  if (interaction.commandName === "purge") {
     // Check if user has permission to manage messages
-    if (!interaction.memberPermissions.has('ManageMessages')) {
+    if (!interaction.memberPermissions.has("ManageMessages")) {
       await interaction.reply({
-        content: '❌ You need the "Manage Messages" permission to use this command.',
-        ephemeral: true
+        content:
+          '❌ You need the "Manage Messages" permission to use this command.',
+        ephemeral: true,
       });
       return;
     }
 
     // Check if bot has permission to manage messages
-    if (!interaction.guild.members.me.permissions.has('ManageMessages')) {
+    if (!interaction.guild.members.me.permissions.has("ManageMessages")) {
       await interaction.reply({
-        content: '❌ I need the "Manage Messages" permission to delete messages.',
-        ephemeral: true
+        content:
+          '❌ I need the "Manage Messages" permission to delete messages.',
+        ephemeral: true,
       });
       return;
     }
@@ -173,16 +202,28 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      const amount = interaction.options.getInteger('amount');
+      const amount = interaction.options.getInteger("amount");
       const channel = interaction.channel;
 
       let deletedCount = 0;
 
       if (amount) {
-        // Delete specific amount
-        const messages = await channel.messages.fetch({ limit: amount });
-        const deleted = await channel.bulkDelete(messages, true);
-        deletedCount = deleted.size;
+        // Delete specific amount in batches of 100
+        let remaining = amount;
+        while (remaining > 0) {
+          const batchSize = Math.min(remaining, 100);
+          const messages = await channel.messages.fetch({ limit: batchSize });
+          if (messages.size === 0) break;
+
+          const deleted = await channel.bulkDelete(messages, true);
+          deletedCount += deleted.size;
+          remaining -= deleted.size;
+
+          // If we deleted fewer than fetched, we've hit messages older than 14 days
+          if (deleted.size < messages.size) {
+            break;
+          }
+        }
       } else {
         // Delete all messages in batches
         let fetchedMessages;
@@ -191,7 +232,7 @@ client.on('interactionCreate', async (interaction) => {
           if (fetchedMessages.size > 0) {
             const deleted = await channel.bulkDelete(fetchedMessages, true);
             deletedCount += deleted.size;
-            
+
             // If we deleted fewer than fetched, we've hit messages older than 14 days
             if (deleted.size < fetchedMessages.size) {
               break;
@@ -201,51 +242,60 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       await interaction.editReply({
-        content: `✅ Successfully deleted ${deletedCount} message(s).\n` +
-                 `${deletedCount < (amount || 100) ? '⚠️ Note: Messages older than 14 days cannot be bulk deleted.' : ''}`
+        content:
+          `✅ Successfully deleted ${deletedCount} message(s).\n` +
+          `${
+            deletedCount < (amount || 100)
+              ? "⚠️ Note: Messages older than 14 days cannot be bulk deleted."
+              : ""
+          }`,
       });
 
-      console.log(`🗑️ ${interaction.user.tag} purged ${deletedCount} messages in #${channel.name}`);
+      console.log(
+        `🗑️ ${interaction.user.tag} purged ${deletedCount} messages in #${channel.name}`
+      );
     } catch (error) {
-      console.error('❌ Error purging messages:', error);
+      console.error("❌ Error purging messages:", error);
       await interaction.editReply({
-        content: '❌ An error occurred while trying to delete messages.'
+        content: "❌ An error occurred while trying to delete messages.",
       });
     }
   }
 });
 
 // Error handling
-client.on('error', (error) => {
-  console.error('❌ Discord client error:', error);
+client.on("error", (error) => {
+  console.error("❌ Discord client error:", error);
 });
 
-process.on('unhandledRejection', (error) => {
-  console.error('❌ Unhandled Promise rejection:', error);
+process.on("unhandledRejection", (error) => {
+  console.error("❌ Unhandled Promise rejection:", error);
 });
 
 // Track if guide has been opened
 let guideOpened = false;
 
 // Open setup guide on startup
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-console.log('🚀 Starting Discord Active Developer Badge Bot...');
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+console.log("🚀 Starting Discord Active Developer Badge Bot...");
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 openInviteBotGuide();
 guideOpened = true;
 
 // Login bot
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
-  console.error('❌ Unable to login bot:', error);
-  console.log('Please check if your DISCORD_TOKEN is correctly set in the .env file');
-  
+  console.error("❌ Unable to login bot:", error);
+  console.log(
+    "Please check if your DISCORD_TOKEN is correctly set in the .env file"
+  );
+
   // Only open guide if it wasn't already opened
   if (!guideOpened) {
-    console.log('\n📖 Opening setup guide to help you configure the bot...');
+    console.log("\n📖 Opening setup guide to help you configure the bot...");
     openInviteBotGuide();
   } else {
-    console.log('\n📖 Please check the setup guide in your browser for help.');
+    console.log("\n📖 Please check the setup guide in your browser for help.");
   }
-  
+
   setTimeout(() => process.exit(1), 2000);
 });

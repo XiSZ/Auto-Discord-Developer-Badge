@@ -17,10 +17,10 @@ const commands = [
       option
         .setName("amount")
         .setDescription(
-          "Number of messages to delete (1-100, default: all fetchable)"
+          "Number of messages to delete (1-1000, default: all fetchable)"
         )
         .setMinValue(1)
-        .setMaxValue(100)
+        .setMaxValue(1000)
         .setRequired(false)
     )
     .toJSON(),
