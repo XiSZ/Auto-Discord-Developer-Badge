@@ -186,8 +186,43 @@ The setup guide (`invite-bot.html`) is automatically generated from your `.env` 
   - Shows data about members, channels, and roles for reference
   - **Note**: For full server backups, use dedicated backup bots
   - **Permissions Required**: Manage Server
+- `/banlist` - View list of banned users in the server
+  - Shows all currently banned users with ban reasons
+  - **Permissions Required**: Ban Members
+- `/clear-warnings <user>` - Clear warnings for a user
+  - `user` (required): User to clear warnings for
+  - **Note**: This is informational only. For persistent warning tracking, use a dedicated warning bot
+  - **Permissions Required**: Administrator
 
-## Automated Scheduling
+### Information & User Commands
+
+- `/avatar [user]` - View a user's profile avatar
+  - `user` (optional): User to view (defaults to yourself)
+- `/roleinfo <role>` - Get detailed information about a role
+  - `role` (required): Role to get info about
+  - Shows: name, ID, color, creation date, member count, position, permissions
+- `/channelinfo [channel]` - Get detailed information about a channel
+  - `channel` (optional): Channel to get info about (defaults to current)
+  - Shows: name, type, ID, creation date, topic (for text channels)
+- `/uptime-ranking` - View bot 30-day uptime percentage and rating
+  - Shows current uptime and star rating (⭐ Fair, ⭐⭐ Good, ⭐⭐⭐ Excellent)
+- `/echo <text>` - Echo back text (fun command)
+  - `text` (required): Text to echo
+- `/notify <user> <message>` - Send a DM notification to a user
+  - `user` (required): User to notify
+  - `message` (required): Message to send via DM
+  - **Note**: User must have DMs enabled for the notification to be sent
+
+## Features
+
+### ✅ Command Visibility & Responses
+
+- All command invocations are **ephemeral** (hidden from other users)
+- **Checkmark (✅) indicators** appear in all successful command responses
+- Failed commands show **error (❌) indicators**
+- Clean, organized response formatting with visual separators
+
+### 🔄 Auto-Execution Scheduling
 
 The bot has built-in automated scheduling:
 

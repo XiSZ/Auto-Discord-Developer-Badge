@@ -264,6 +264,82 @@ const commands = [
     .setName("backup")
     .setDescription("View server backup information")
     .toJSON(),
+  // Avatar command
+  new SlashCommandBuilder()
+    .setName("avatar")
+    .setDescription("View a user's avatar")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to view avatar (defaults to you)")
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Notify command
+  new SlashCommandBuilder()
+    .setName("notify")
+    .setDescription("Send a DM notification to a user")
+    .addUserOption((option) =>
+      option.setName("user").setDescription("User to notify").setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Message to send")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Echo command
+  new SlashCommandBuilder()
+    .setName("echo")
+    .setDescription("Echo back text (fun command)")
+    .addStringOption((option) =>
+      option.setName("text").setDescription("Text to echo").setRequired(true)
+    )
+    .toJSON(),
+  // Role info command
+  new SlashCommandBuilder()
+    .setName("roleinfo")
+    .setDescription("Get detailed information about a role")
+    .addRoleOption((option) =>
+      option
+        .setName("role")
+        .setDescription("Role to get info about")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Channel info command
+  new SlashCommandBuilder()
+    .setName("channelinfo")
+    .setDescription("Get detailed information about a channel")
+    .addChannelOption((option) =>
+      option
+        .setName("channel")
+        .setDescription("Channel to get info about (defaults to current)")
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Uptime ranking command
+  new SlashCommandBuilder()
+    .setName("uptime-ranking")
+    .setDescription("View bot 30-day uptime ranking")
+    .toJSON(),
+  // Ban list command
+  new SlashCommandBuilder()
+    .setName("banlist")
+    .setDescription("View list of banned users in the server")
+    .toJSON(),
+  // Clear warnings command
+  new SlashCommandBuilder()
+    .setName("clear-warnings")
+    .setDescription("Clear warnings for a user (admin only)")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to clear warnings for")
+        .setRequired(true)
+    )
+    .toJSON(),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);

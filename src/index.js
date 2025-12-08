@@ -114,16 +114,16 @@ let presenceIndex = 0;
 const presenceMessages = [
   {
     type: ActivityType.Watching,
-    name: "Watching over your Active Developer status",
+    name: "over your Active Developer status",
   },
-  { type: ActivityType.Playing, name: "Playing with Discord API" },
-  { type: ActivityType.Listening, name: "Listening to user commands" },
+  { type: ActivityType.Playing, name: "with Discord API" },
+  { type: ActivityType.Listening, name: "to user commands" },
   {
     type: ActivityType.Watching,
     name: `Currently active in ${client.guilds?.cache.size || 0} servers`,
   },
-  { type: ActivityType.Playing, name: "Playing Auto-Maintenance Mode" },
-  { type: ActivityType.Competing, name: "Competing in the uptime challenge" },
+  { type: ActivityType.Playing, name: "Auto-Maintenance Mode" },
+  { type: ActivityType.Competing, name: "in the uptime challenge" },
 ];
 
 function updateRichPresence() {
@@ -227,6 +227,22 @@ function openInviteBotGuide() {
   });
 }
 
+// Helper function for successful command response
+async function successReply(interaction, content, isEphemeral = true) {
+  return await interaction.reply({
+    content: `✅ ${content}`,
+    ephemeral: isEphemeral,
+  });
+}
+
+// Helper function for error response
+async function errorReply(interaction, content) {
+  return await interaction.reply({
+    content: `❌ ${content}`,
+    ephemeral: true,
+  });
+}
+
 client.once("clientReady", () => {
   console.log("✅ Bot is online!");
   console.log(`🤖 Logged in as: ${client.user.tag}`);
@@ -283,10 +299,19 @@ client.on("interactionCreate", async (interaction) => {
         `\`/poll <question> <opt1> <opt2> [opt3-5]\` – Create a poll\n` +
         `\`/remind <minutes> <reminder>\` – Set a reminder\n` +
         `\`/invite\` – Get bot invite link\n` +
+        `\`/avatar [user]\` – View user's avatar\n` +
+        `\`/echo <text>\` – Echo back text\n` +
+        `\`/notify <user> <message>\` – Send DM notification\n` +
+        `\n**Information:**\n` +
+        `\`/roleinfo <role>\` – Get role details\n` +
+        `\`/channelinfo [channel]\` – Get channel details\n` +
+        `\`/uptime-ranking\` – View bot uptime percentage\n` +
         `\n**Logging & Monitoring:**\n` +
         `\`/logs [lines]\` – View audit logs\n` +
         `\`/config view\` – View bot configuration\n` +
         `\`/backup\` – View server backup info\n` +
+        `\`/banlist\` – View banned users\n` +
+        `\`/clear-warnings <user>\` – Clear user warnings\n` +
         `\`/help\` – Show this message`,
       ephemeral: true,
     });
@@ -295,7 +320,7 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.commandName === "ping") {
     const startTime = Date.now();
-    await interaction.deferReply();
+    await interaction.deferReply({ ephemeral: true });
 
     const latency = Date.now() - startTime;
     const apiLatency = Math.round(client.ws.ping);
@@ -307,7 +332,7 @@ client.on("interactionCreate", async (interaction) => {
 
     await interaction.editReply({
       content:
-        `🏓 Pong!\n` +
+        `✅ **Pong!**\n` +
         `⏱️ Latency: ${latency}ms\n` +
         `💓 API Latency: ${apiLatency}ms\n` +
         `✅ Bot is working properly\n` +
@@ -329,10 +354,11 @@ client.on("interactionCreate", async (interaction) => {
 
     await interaction.reply({
       content:
-        `⏰ Bot Uptime\n` +
+        `✅ **Bot Uptime**\n` +
         `📊 Total: ${days}d ${hours}h ${minutes}m ${seconds}s\n` +
         `🚀 Started: <t:${Math.floor(botStartTime / 1000)}:R>\n` +
         `✅ Status: Online and operational`,
+      ephemeral: true,
     });
 
     console.log(`✅ ${interaction.user.tag} executed uptime command`);
@@ -1110,7 +1136,7 @@ client.on("interactionCreate", async (interaction) => {
         `\n💡 **Note:** This is informational only. For full server backups, consider using dedicated backup bots or server management tools.`;
 
       await interaction.reply({
-        content: backupInfo,
+        content: `✅ ${backupInfo}`,
         ephemeral: true,
       });
 
@@ -1119,6 +1145,272 @@ client.on("interactionCreate", async (interaction) => {
       console.error("❌ Error fetching backup info:", error);
       await interaction.reply({
         content: "❌ Failed to fetch backup information.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Avatar command - Show user's avatar
+  if (interaction.commandName === "avatar") {
+    try {
+      const user = interaction.options.getUser("user") || interaction.user;
+      const avatarUrl = user.displayAvatarURL({ size: 512 });
+
+      await interaction.reply({
+        content: `✅ **${user.username}'s Avatar:**\n${avatarUrl}`,
+        ephemeral: true,
+      });
+
+      console.log(`👤 ${interaction.user.tag} viewed ${user.tag}'s avatar`);
+    } catch (error) {
+      console.error("❌ Error fetching avatar:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch avatar.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Notify command - Send DM to a user
+  if (interaction.commandName === "notify") {
+    try {
+      const user = interaction.options.getUser("user");
+      const message = interaction.options.getString("message");
+
+      await user.send(
+        `📬 **Notification from ${interaction.user.tag}:**\n${message}`
+      );
+
+      await interaction.reply({
+        content: `✅ Notification sent to ${user}!`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `📬 ${interaction.user.tag} sent notification to ${user.tag}`
+      );
+    } catch (error) {
+      console.error("❌ Error sending notification:", error);
+      await interaction.reply({
+        content: "❌ Failed to send notification (user may have DMs disabled).",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Echo command - Repeat text (fun command)
+  if (interaction.commandName === "echo") {
+    try {
+      const text = interaction.options.getString("text");
+
+      await interaction.reply({
+        content: `✅ **Echo:** ${text}`,
+        ephemeral: true,
+      });
+
+      console.log(`🔊 ${interaction.user.tag} echoed: ${text}`);
+    } catch (error) {
+      console.error("❌ Error echoing text:", error);
+      await interaction.reply({
+        content: "❌ Failed to echo text.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Role info command - Get role information
+  if (interaction.commandName === "roleinfo") {
+    try {
+      const role = interaction.options.getRole("role");
+      const createdAt = Math.floor(role.createdTimestamp / 1000);
+      const memberCount = interaction.guild.members.cache.filter((m) =>
+        m.roles.cache.has(role.id)
+      ).size;
+
+      const roleInfo =
+        `🏷️ **Role Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Name:** ${role.name}\n` +
+        `**ID:** ${role.id}\n` +
+        `**Color:** ${role.hexColor}\n` +
+        `**Created:** <t:${createdAt}:R>\n` +
+        `**Members:** ${memberCount}\n` +
+        `**Position:** ${role.position}\n` +
+        `**Managed:** ${role.managed ? "Yes" : "No"}\n` +
+        `**Mentionable:** ${role.mentionable ? "Yes" : "No"}`;
+
+      await interaction.reply({
+        content: `✅ ${roleInfo}`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🏷️ ${interaction.user.tag} viewed info for role: ${role.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error fetching role info:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch role information.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Channel info command - Get channel information
+  if (interaction.commandName === "channelinfo") {
+    try {
+      const channel =
+        interaction.options.getChannel("channel") || interaction.channel;
+      const createdAt = Math.floor(channel.createdTimestamp / 1000);
+
+      let channelInfo =
+        `💬 **Channel Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Name:** ${channel.name}\n` +
+        `**Type:** ${channel.type === 0 ? "Text" : "Voice"}\n` +
+        `**ID:** ${channel.id}\n` +
+        `**Created:** <t:${createdAt}:R>`;
+
+      if (channel.type === 0) {
+        channelInfo += `\n**Topic:** ${channel.topic || "None"}`;
+      }
+
+      await interaction.reply({
+        content: `✅ ${channelInfo}`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `💬 ${interaction.user.tag} viewed info for channel: ${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error fetching channel info:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch channel information.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Uptime ranking command - Show bot uptime percentage
+  if (interaction.commandName === "uptime-ranking") {
+    try {
+      const uptime = Date.now() - botStartTime;
+      const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((uptime % (1000 * 60)) / 1000);
+      const percentage = ((uptime / (30 * 24 * 60 * 60 * 1000)) * 100).toFixed(
+        2
+      );
+
+      const uptimeRank =
+        `⏰ **30-Day Uptime Ranking**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📊 **Total Uptime:** ${days}d ${hours}h ${minutes}m ${seconds}s\n` +
+        `📈 **Uptime %:** ${Math.min(100, percentage)}%\n` +
+        `🎯 **Rating:** ${
+          uptime > 25 * 24 * 60 * 60 * 1000
+            ? "⭐⭐⭐ Excellent"
+            : uptime > 20 * 24 * 60 * 60 * 1000
+            ? "⭐⭐ Good"
+            : "⭐ Fair"
+        }`;
+
+      await interaction.reply({
+        content: `✅ ${uptimeRank}`,
+        ephemeral: true,
+      });
+
+      console.log(`⏰ ${interaction.user.tag} checked uptime ranking`);
+    } catch (error) {
+      console.error("❌ Error fetching uptime ranking:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch uptime ranking.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Ban list command - Show banned users
+  if (interaction.commandName === "banlist") {
+    if (!interaction.memberPermissions.has("BanMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Ban Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const bans = await interaction.guild.bans.fetch();
+
+      if (bans.size === 0) {
+        await interaction.reply({
+          content: "✅ No banned users in this server.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      let banListContent = `⛔ **Ban List (${bans.size} total)**\n━━━━━━━━━━━━━━━━━━━\n`;
+      let count = 0;
+
+      for (const [, ban] of bans) {
+        if (count >= 20) {
+          banListContent += `\n... and ${bans.size - 20} more`;
+          break;
+        }
+        banListContent += `• **${ban.user.tag}** - ${
+          ban.reason || "No reason"
+        }\n`;
+        count++;
+      }
+
+      await interaction.reply({
+        content: `✅ ${banListContent}`,
+        ephemeral: true,
+      });
+
+      console.log(`⛔ ${interaction.user.tag} viewed ban list`);
+    } catch (error) {
+      console.error("❌ Error fetching ban list:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch ban list.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Clear warnings command - Reset warn count (admin)
+  if (interaction.commandName === "clear-warnings") {
+    if (!interaction.memberPermissions.has("Administrator")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Administrator" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+
+      await interaction.reply({
+        content: `✅ Warnings cleared for ${user}! (Note: This bot doesn't track persistent warnings. Use a dedicated warning bot for that.)`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${interaction.user.tag} cleared warnings for ${user.tag}`
+      );
+    } catch (error) {
+      console.error("❌ Error clearing warnings:", error);
+      await interaction.reply({
+        content: "❌ Failed to clear warnings.",
         ephemeral: true,
       });
     }
