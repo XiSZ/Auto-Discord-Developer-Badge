@@ -121,7 +121,7 @@ let presenceIndex = 0;
 const presenceMessages = [
   {
     type: ActivityType.Watching,
-    name: "over your Active Developer status",
+    name: " Developer tutorials",
   },
   { type: ActivityType.Playing, name: "with Discord API" },
   { type: ActivityType.Listening, name: "to user commands" },
