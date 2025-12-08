@@ -107,11 +107,85 @@ The setup guide (`invite-bot.html`) is automatically generated from your `.env` 
 
 ## Command List
 
-- `/ping` - Check if the bot is working properly and maintain Active Developer status
-- `/purge [amount]` - Delete messages in the channel (requires Manage Messages permission)
+### Badge & Information Commands
+
+- `/ping` - Check bot latency and maintain Active Developer status
+- `/uptime` - Check how long the bot has been running
+- `/status` - View next auto-execution date for your Active Developer badge
+- `/serverinfo` - Display detailed information about the server (members, channels, roles, creation date, etc.)
+- `/userinfo [user]` - Get information about a user (account creation, join date, roles, etc.)
+- `/stats` - View bot performance statistics (uptime, memory usage, server count, API latency)
+- `/help` - Display all available commands
+
+### Moderation Commands
+
+- `/kick <user> [reason]` - Kick a user from the server
+  - `user` (required): User to kick
+  - `reason` (optional): Reason for the kick
+  - **Permissions Required**: Kick Members
+- `/ban <user> [reason]` - Ban a user from the server
+  - `user` (required): User to ban
+  - `reason` (optional): Reason for the ban
+  - **Permissions Required**: Ban Members
+- `/mute <user> <minutes> [reason]` - Mute/timeout a user temporarily
+  - `user` (required): User to mute
+  - `minutes` (required): Duration in minutes (1-40320)
+  - `reason` (optional): Reason for the mute
+  - **Permissions Required**: Moderate Members
+- `/unmute <user>` - Unmute a user
+  - `user` (required): User to unmute
+  - **Permissions Required**: Moderate Members
+- `/warn <user> [reason]` - Issue a warning to a user
+  - `user` (required): User to warn
+  - `reason` (optional): Reason for the warning
+  - **Permissions Required**: Moderate Members
+
+### Channel Management Commands
+
+- `/lock` - Lock the current channel (prevent members from sending messages)
+  - **Permissions Required**: Manage Channels
+- `/unlock` - Unlock the current channel
+  - **Permissions Required**: Manage Channels
+- `/slowmode <seconds>` - Set channel slowmode delay
+  - `seconds` (required): Delay in seconds between messages (0-21600, set to 0 to disable)
+  - **Permissions Required**: Manage Channels
+- `/purge [amount]` - Delete messages in bulk from the channel
   - `amount` (optional): Number of messages to delete (1-1000). If not specified, deletes all fetchable messages
   - **Note**: Only messages newer than 14 days can be bulk deleted due to Discord API limitations
-- `/uptime` - Check how long the bot has been running
+  - **Permissions Required**: Manage Messages
+
+### Utility Commands
+
+- `/say <message> [channel]` - Send a message as the bot
+  - `message` (required): Message content to send
+  - `channel` (optional): Channel to send to (defaults to current channel)
+  - **Permissions Required**: Manage Messages
+- `/poll <question> <option1> <option2> [option3-5]` - Create a poll with reactions
+  - `question` (required): The poll question
+  - `option1` (required): First poll option
+  - `option2` (required): Second poll option
+  - `option3-5` (optional): Additional options (up to 5 total)
+  - **Note**: React with the numbered emojis (1️⃣-5️⃣) to vote
+- `/remind <minutes> <reminder>` - Set a reminder that will be sent via DM
+  - `minutes` (required): Time in minutes until reminder (1-10080 / ~7 days)
+  - `reminder` (required): What you want to be reminded about
+  - **Note**: Reminder is sent via DM after the specified time
+- `/invite` - Get the bot invite link to add it to other servers
+  - Shows a generated invite URL with all necessary permissions
+
+### Logging & Monitoring Commands
+
+- `/logs [lines]` - View recent server audit logs
+  - `lines` (optional): Number of logs to display (1-50, default: 10)
+  - Shows recent actions like kicks, bans, role changes, etc.
+  - **Permissions Required**: Manage Server
+- `/config view` - View current bot configuration and settings
+  - Displays guild-specific settings and next auto-execution date
+  - **Permissions Required**: Manage Server
+- `/backup` - View server backup information
+  - Shows data about members, channels, and roles for reference
+  - **Note**: For full server backups, use dedicated backup bots
+  - **Permissions Required**: Manage Server
 
 ## Automated Scheduling
 

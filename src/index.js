@@ -254,6 +254,45 @@ client.once("clientReady", () => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
+  // Help command
+  if (interaction.commandName === "help") {
+    await interaction.reply({
+      content:
+        `📖 **Available Commands**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Badge & Info:**\n` +
+        `\`/ping\` – Check bot latency and badge status\n` +
+        `\`/uptime\` – View bot uptime\n` +
+        `\`/status\` – Show next auto-execution date\n` +
+        `\`/serverinfo\` – Display server information\n` +
+        `\`/userinfo [user]\` – Get user details\n` +
+        `\`/stats\` – View bot performance statistics\n` +
+        `\n**Moderation:**\n` +
+        `\`/kick <user> [reason]\` – Remove user from server\n` +
+        `\`/ban <user> [reason]\` – Ban user from server\n` +
+        `\`/mute <user> <minutes> [reason]\` – Mute user\n` +
+        `\`/unmute <user>\` – Unmute user\n` +
+        `\`/warn <user> [reason]\` – Warn user\n` +
+        `\n**Channel Management:**\n` +
+        `\`/lock\` – Lock current channel (no messages)\n` +
+        `\`/unlock\` – Unlock current channel\n` +
+        `\`/slowmode <seconds>\` – Set channel slowmode (0 to disable)\n` +
+        `\`/purge [amount]\` – Delete messages from channel\n` +
+        `\n**Utility:**\n` +
+        `\`/say <message> [channel]\` – Send message as bot\n` +
+        `\`/poll <question> <opt1> <opt2> [opt3-5]\` – Create a poll\n` +
+        `\`/remind <minutes> <reminder>\` – Set a reminder\n` +
+        `\`/invite\` – Get bot invite link\n` +
+        `\n**Logging & Monitoring:**\n` +
+        `\`/logs [lines]\` – View audit logs\n` +
+        `\`/config view\` – View bot configuration\n` +
+        `\`/backup\` – View server backup info\n` +
+        `\`/help\` – Show this message`,
+      ephemeral: true,
+    });
+    console.log(`✅ ${interaction.user.tag} executed help command`);
+  }
+
   if (interaction.commandName === "ping") {
     const startTime = Date.now();
     await interaction.deferReply();
@@ -379,6 +418,708 @@ client.on("interactionCreate", async (interaction) => {
       console.error("❌ Error purging messages:", error);
       await interaction.editReply({
         content: "❌ An error occurred while trying to delete messages.",
+      });
+    }
+  }
+
+  // Status command - Badge-specific info
+  if (interaction.commandName === "status") {
+    const timeSinceLastAuto = Date.now() - lastExecutionTime;
+    const daysUntilNext = Math.ceil(
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24)
+    );
+    const hoursUntilNext = Math.ceil(
+      ((AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) % (1000 * 60 * 60 * 24)) /
+        (1000 * 60 * 60)
+    );
+    const nextExecutionDate = new Date(
+      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+    );
+
+    await interaction.reply({
+      content:
+        `🎖️ **Active Developer Badge Status**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📅 Last auto-execution: <t:${Math.floor(
+          lastExecutionTime / 1000
+        )}:R>\n` +
+        `⏰ Next scheduled: ${nextExecutionDate.toLocaleString("en-US")}\n` +
+        `⏳ Time remaining: ${daysUntilNext}d ${hoursUntilNext}h\n` +
+        `🤖 Bot Status: Online and maintaining your badge\n` +
+        `✅ Auto-execution: Enabled`,
+    });
+
+    console.log(`✅ ${interaction.user.tag} executed status command`);
+  }
+
+  // Server info command
+  if (interaction.commandName === "serverinfo") {
+    const guild = interaction.guild;
+    const owner = await guild.fetchOwner();
+    const memberCount = guild.memberCount;
+    const channelCount = guild.channels.cache.size;
+    const roleCount = guild.roles.cache.size;
+    const verificationLevel = ["None", "Low", "Medium", "High", "Very High"][
+      guild.verificationLevel
+    ];
+
+    const createdAt = Math.floor(guild.createdTimestamp / 1000);
+
+    await interaction.reply({
+      content:
+        `📊 **Server Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🏛️ **Name:** ${guild.name}\n` +
+        `🆔 **ID:** ${guild.id}\n` +
+        `👑 **Owner:** ${owner.user.tag}\n` +
+        `📅 **Created:** <t:${createdAt}:R>\n` +
+        `👥 **Members:** ${memberCount}\n` +
+        `💬 **Channels:** ${channelCount}\n` +
+        `🏷️ **Roles:** ${roleCount}\n` +
+        `🔐 **Verification Level:** ${verificationLevel}\n` +
+        `${guild.icon ? `🖼️ **Icon:** [View](${guild.iconURL()})` : ""}`,
+    });
+
+    console.log(`✅ ${interaction.user.tag} executed serverinfo command`);
+  }
+
+  // User info command
+  if (interaction.commandName === "userinfo") {
+    const user = interaction.options.getUser("user") || interaction.user;
+    const member = await interaction.guild.members.fetch(user.id);
+
+    const joinedAt = Math.floor(member.joinedTimestamp / 1000);
+    const createdAt = Math.floor(user.createdTimestamp / 1000);
+    const roles =
+      member.roles.cache
+        .filter((r) => r.name !== "@everyone")
+        .map((r) => r.toString())
+        .join(", ") || "None";
+
+    await interaction.reply({
+      content:
+        `👤 **User Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 **Username:** ${user.tag}\n` +
+        `🆔 **ID:** ${user.id}\n` +
+        `📅 **Account Created:** <t:${createdAt}:R>\n` +
+        `🎪 **Joined Server:** <t:${joinedAt}:R>\n` +
+        `🏷️ **Roles:** ${roles}\n` +
+        `${user.bot ? "🤖 **Type:** Bot" : "👨 **Type:** User"}`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `✅ ${interaction.user.tag} executed userinfo command for ${user.tag}`
+    );
+  }
+
+  // Stats command
+  if (interaction.commandName === "stats") {
+    const uptime = getUptime();
+    const memUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+    const serverCount = client.guilds.cache.size;
+    const userCount = client.users.cache.size;
+    const channelCount = client.channels.cache.size;
+
+    await interaction.reply({
+      content:
+        `📈 **Bot Statistics**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `⏰ **Uptime:** ${uptime}\n` +
+        `🖥️ **Memory Usage:** ${memUsage} MB\n` +
+        `🏛️ **Servers:** ${serverCount}\n` +
+        `👥 **Users Cached:** ${userCount}\n` +
+        `💬 **Channels Cached:** ${channelCount}\n` +
+        `💓 **API Latency:** ${Math.round(client.ws.ping)}ms\n` +
+        `🔌 **Discord.js Version:** v${require("discord.js").version}`,
+    });
+
+    console.log(`✅ ${interaction.user.tag} executed stats command`);
+  }
+
+  // Lock command
+  if (interaction.commandName === "lock") {
+    if (!interaction.memberPermissions.has("ManageChannels")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Channels" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const channel = interaction.channel;
+      await channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        {
+          SendMessages: false,
+        }
+      );
+
+      await interaction.reply({
+        content: `🔒 Channel locked! Only members with specific roles can send messages.`,
+      });
+
+      console.log(`🔒 ${interaction.user.tag} locked channel #${channel.name}`);
+    } catch (error) {
+      console.error("❌ Error locking channel:", error);
+      await interaction.reply({
+        content: "❌ Failed to lock the channel.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Unlock command
+  if (interaction.commandName === "unlock") {
+    if (!interaction.memberPermissions.has("ManageChannels")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Channels" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const channel = interaction.channel;
+      await channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        {
+          SendMessages: null,
+        }
+      );
+
+      await interaction.reply({
+        content: `🔓 Channel unlocked! Everyone can send messages again.`,
+      });
+
+      console.log(
+        `🔓 ${interaction.user.tag} unlocked channel #${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error unlocking channel:", error);
+      await interaction.reply({
+        content: "❌ Failed to unlock the channel.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Slowmode command
+  if (interaction.commandName === "slowmode") {
+    if (!interaction.memberPermissions.has("ManageChannels")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Channels" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const seconds = interaction.options.getInteger("seconds");
+      const channel = interaction.channel;
+
+      await channel.setRateLimitPerUser(seconds);
+
+      const message =
+        seconds === 0
+          ? "🐇 Slowmode disabled!"
+          : `🐢 Slowmode set to ${seconds} second(s)`;
+
+      await interaction.reply({ content: message });
+
+      console.log(
+        `⏱️ ${interaction.user.tag} set slowmode to ${seconds}s in #${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error setting slowmode:", error);
+      await interaction.reply({
+        content: "❌ Failed to set slowmode.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Kick command
+  if (interaction.commandName === "kick") {
+    if (!interaction.memberPermissions.has("KickMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Kick Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!interaction.guild.members.me.permissions.has("KickMembers")) {
+      await interaction.reply({
+        content: '❌ I need the "Kick Members" permission to kick users.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const reason =
+        interaction.options.getString("reason") || "No reason provided";
+      const member = await interaction.guild.members.fetch(user.id);
+
+      await member.kick(reason);
+
+      await interaction.reply({
+        content: `✅ **${user.tag}** has been kicked.\n📝 **Reason:** ${reason}`,
+      });
+
+      console.log(`👢 ${interaction.user.tag} kicked ${user.tag}: ${reason}`);
+    } catch (error) {
+      console.error("❌ Error kicking user:", error);
+      await interaction.reply({
+        content: "❌ Failed to kick the user.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Ban command
+  if (interaction.commandName === "ban") {
+    if (!interaction.memberPermissions.has("BanMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Ban Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!interaction.guild.members.me.permissions.has("BanMembers")) {
+      await interaction.reply({
+        content: '❌ I need the "Ban Members" permission to ban users.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const reason =
+        interaction.options.getString("reason") || "No reason provided";
+      const member = await interaction.guild.members.fetch(user.id);
+
+      await member.ban({ reason });
+
+      await interaction.reply({
+        content: `✅ **${user.tag}** has been banned.\n📝 **Reason:** ${reason}`,
+      });
+
+      console.log(`⛔ ${interaction.user.tag} banned ${user.tag}: ${reason}`);
+    } catch (error) {
+      console.error("❌ Error banning user:", error);
+      await interaction.reply({
+        content: "❌ Failed to ban the user.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Mute command
+  if (interaction.commandName === "mute") {
+    if (!interaction.memberPermissions.has("ModerateMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Moderate Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!interaction.guild.members.me.permissions.has("ModerateMembers")) {
+      await interaction.reply({
+        content: '❌ I need the "Moderate Members" permission to mute users.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const minutes = interaction.options.getInteger("minutes");
+      const reason =
+        interaction.options.getString("reason") || "No reason provided";
+      const member = await interaction.guild.members.fetch(user.id);
+
+      const muteTime = minutes * 60 * 1000;
+
+      await member.timeout(muteTime, reason);
+
+      await interaction.reply({
+        content: `🔇 **${user.tag}** has been muted for ${minutes} minute(s).\n📝 **Reason:** ${reason}`,
+      });
+
+      console.log(
+        `🔇 ${interaction.user.tag} muted ${user.tag} for ${minutes}m: ${reason}`
+      );
+    } catch (error) {
+      console.error("❌ Error muting user:", error);
+      await interaction.reply({
+        content: "❌ Failed to mute the user.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Unmute command
+  if (interaction.commandName === "unmute") {
+    if (!interaction.memberPermissions.has("ModerateMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Moderate Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!interaction.guild.members.me.permissions.has("ModerateMembers")) {
+      await interaction.reply({
+        content: '❌ I need the "Moderate Members" permission to unmute users.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const member = await interaction.guild.members.fetch(user.id);
+
+      await member.timeout(null);
+
+      await interaction.reply({
+        content: `🔊 **${user.tag}** has been unmuted.`,
+      });
+
+      console.log(`🔊 ${interaction.user.tag} unmuted ${user.tag}`);
+    } catch (error) {
+      console.error("❌ Error unmuting user:", error);
+      await interaction.reply({
+        content: "❌ Failed to unmute the user.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Warn command
+  if (interaction.commandName === "warn") {
+    if (!interaction.memberPermissions.has("ModerateMembers")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Moderate Members" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const reason =
+        interaction.options.getString("reason") || "No reason provided";
+
+      await interaction.reply({
+        content: `⚠️ **${user.tag}** has been warned.\n📝 **Reason:** ${reason}`,
+      });
+
+      console.log(`⚠️ ${interaction.user.tag} warned ${user.tag}: ${reason}`);
+    } catch (error) {
+      console.error("❌ Error warning user:", error);
+      await interaction.reply({
+        content: "❌ Failed to warn the user.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Say command
+  if (interaction.commandName === "say") {
+    if (!interaction.memberPermissions.has("ManageMessages")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Messages" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const message = interaction.options.getString("message");
+      const channel =
+        interaction.options.getChannel("channel") || interaction.channel;
+
+      await channel.send(message);
+
+      await interaction.reply({
+        content: `✅ Message sent to ${channel}!`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `💬 ${interaction.user.tag} sent a message via /say in #${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
+      await interaction.reply({
+        content: "❌ Failed to send the message.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Poll command
+  if (interaction.commandName === "poll") {
+    try {
+      const question = interaction.options.getString("question");
+      const option1 = interaction.options.getString("option1");
+      const option2 = interaction.options.getString("option2");
+      const option3 = interaction.options.getString("option3");
+      const option4 = interaction.options.getString("option4");
+      const option5 = interaction.options.getString("option5");
+
+      const options = [option1, option2, option3, option4, option5].filter(
+        Boolean
+      );
+      const emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
+
+      let pollContent = `📊 **${question}**\n━━━━━━━━━━━━━━━━━\n`;
+      options.forEach((opt, i) => {
+        pollContent += `${emojis[i]} ${opt}\n`;
+      });
+
+      const pollMessage = await interaction.reply({
+        content: pollContent,
+        fetchReply: true,
+      });
+
+      for (let i = 0; i < options.length; i++) {
+        await pollMessage.react(emojis[i]);
+      }
+
+      console.log(`📊 ${interaction.user.tag} created a poll: ${question}`);
+    } catch (error) {
+      console.error("❌ Error creating poll:", error);
+      await interaction.reply({
+        content: "❌ Failed to create the poll.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Remind command
+  if (interaction.commandName === "remind") {
+    try {
+      const minutes = interaction.options.getInteger("minutes");
+      const reminder = interaction.options.getString("reminder");
+      const user = interaction.user;
+
+      await interaction.reply({
+        content: `⏰ Reminder set! You'll be reminded in ${minutes} minute(s).`,
+        ephemeral: true,
+      });
+
+      setTimeout(async () => {
+        try {
+          await user.send(
+            `⏰ **Reminder from ${minutes} minute(s) ago:** ${reminder}`
+          );
+        } catch (error) {
+          console.error("❌ Could not send reminder DM:", error);
+        }
+      }, minutes * 60 * 1000);
+
+      console.log(
+        `⏰ ${interaction.user.tag} set a reminder: ${reminder} (${minutes}m)`
+      );
+    } catch (error) {
+      console.error("❌ Error setting reminder:", error);
+      await interaction.reply({
+        content: "❌ Failed to set the reminder.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Invite command
+  if (interaction.commandName === "invite") {
+    try {
+      const inviteUrl = client.generateInvite({
+        scopes: ["bot"],
+        permissions: [
+          "SendMessages",
+          "ManageMessages",
+          "KickMembers",
+          "BanMembers",
+          "ModerateMembers",
+          "ManageChannels",
+          "UseApplicationCommands",
+        ],
+      });
+
+      await interaction.reply({
+        content: `🔗 **Invite the bot to your server:**\n${inviteUrl}`,
+        ephemeral: true,
+      });
+
+      console.log(`🔗 ${interaction.user.tag} requested bot invite link`);
+    } catch (error) {
+      console.error("❌ Error generating invite:", error);
+      await interaction.reply({
+        content: "❌ Failed to generate invite link.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Logs command - Show recent bot action logs
+  if (interaction.commandName === "logs") {
+    if (!interaction.memberPermissions.has("ManageGuild")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Server" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const lines = interaction.options.getInteger("lines") || 10;
+      const guild = interaction.guild;
+
+      // Fetch audit logs
+      const auditLogs = await guild.fetchAuditLogs({ limit: lines });
+      let logsContent =
+        `📋 **Recent Server Actions** (Last ${Math.min(
+          lines,
+          auditLogs.entries.size
+        )} actions)\n` + `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+      if (auditLogs.entries.size === 0) {
+        logsContent += "No recent actions found.";
+      } else {
+        auditLogs.entries.forEach((log) => {
+          const action = log.action;
+          const executor = log.executor.tag;
+          const target = log.target?.tag || log.targetId || "Unknown";
+          const reason = log.reason || "No reason";
+
+          logsContent += `**${action}** - ${executor} → ${target}\n`;
+          logsContent += `   📝 Reason: ${reason}\n`;
+        });
+      }
+
+      await interaction.reply({
+        content: logsContent,
+        ephemeral: true,
+      });
+
+      console.log(`📋 ${interaction.user.tag} viewed server audit logs`);
+    } catch (error) {
+      console.error("❌ Error fetching logs:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch audit logs.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Config command - Show/update bot settings
+  if (interaction.commandName === "config") {
+    if (!interaction.memberPermissions.has("ManageGuild")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Server" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "view") {
+      try {
+        const guildId = interaction.guild.id;
+        const autoExecEnabled = true; // Default enabled
+        const nextExecDate = new Date(
+          lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+        );
+
+        const configContent =
+          `⚙️ **Bot Configuration for ${interaction.guild.name}**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `🆔 **Guild ID:** ${guildId}\n` +
+          `🤖 **Auto-Execution:** ${
+            autoExecEnabled ? "✅ Enabled" : "❌ Disabled"
+          }\n` +
+          `📅 **Next Execution:** ${nextExecDate.toLocaleString("en-US")}\n` +
+          `⏱️ **Execution Interval:** ${AUTO_EXECUTE_INTERVAL_DAYS} days\n` +
+          `💓 **API Latency:** ${Math.round(client.ws.ping)}ms`;
+
+        await interaction.reply({
+          content: configContent,
+          ephemeral: true,
+        });
+
+        console.log(`⚙️ ${interaction.user.tag} viewed bot configuration`);
+      } catch (error) {
+        console.error("❌ Error viewing config:", error);
+        await interaction.reply({
+          content: "❌ Failed to fetch configuration.",
+          ephemeral: true,
+        });
+      }
+    }
+  }
+
+  // Backup command - Show backup info
+  if (interaction.commandName === "backup") {
+    if (!interaction.memberPermissions.has("ManageGuild")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Server" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const guild = interaction.guild;
+      const memberCount = guild.memberCount;
+      const channelCount = guild.channels.cache.size;
+      const roleCount = guild.roles.cache.size;
+
+      const backupInfo =
+        `💾 **Server Backup Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🏛️ **Server:** ${guild.name}\n` +
+        `👥 **Members:** ${memberCount}\n` +
+        `💬 **Channels:** ${channelCount}\n` +
+        `🏷️ **Roles:** ${roleCount}\n` +
+        `📊 **Total Data Points:** ${
+          memberCount + channelCount + roleCount
+        }\n` +
+        `\n💡 **Note:** This is informational only. For full server backups, consider using dedicated backup bots or server management tools.`;
+
+      await interaction.reply({
+        content: backupInfo,
+        ephemeral: true,
+      });
+
+      console.log(`💾 ${interaction.user.tag} viewed backup information`);
+    } catch (error) {
+      console.error("❌ Error fetching backup info:", error);
+      await interaction.reply({
+        content: "❌ Failed to fetch backup information.",
+        ephemeral: true,
       });
     }
   }
