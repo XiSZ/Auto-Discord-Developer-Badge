@@ -349,13 +349,18 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
     console.log("🔄 Starting to register slash commands...");
 
     // Register commands to specific server (instant effect)
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
-      ),
-      { body: commands }
-    );
+    // await rest.put(
+    //   Routes.applicationGuildCommands(
+    //     process.env.CLIENT_ID,
+    //     process.env.GUILD_ID
+    //   ),
+    //   { body: commands }
+    // );
+
+    // Register commands globally (works in all servers)
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
+      body: commands,
+    });
 
     console.log("✅ Successfully registered slash commands!");
     console.log(`📝 Registered ${commands.length} command(s):`);
