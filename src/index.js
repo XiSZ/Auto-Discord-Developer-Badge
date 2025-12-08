@@ -1,4 +1,9 @@
-import { Client, GatewayIntentBits, ActivityType } from "discord.js";
+import {
+  Client,
+  GatewayIntentBits,
+  ActivityType,
+  version as discordVersion,
+} from "discord.js";
 import dotenv from "dotenv";
 import { exec } from "child_process";
 import { fileURLToPath } from "url";
@@ -565,7 +570,7 @@ client.on("interactionCreate", async (interaction) => {
         `👥 **Users Cached:** ${userCount}\n` +
         `💬 **Channels Cached:** ${channelCount}\n` +
         `💓 **API Latency:** ${Math.round(client.ws.ping)}ms\n` +
-        `🔌 **Discord.js Version:** v${require("discord.js").version}`,
+        `🔌 **Discord.js Version:** v${discordVersion}`,
     });
 
     console.log(`✅ ${interaction.user.tag} executed stats command`);
