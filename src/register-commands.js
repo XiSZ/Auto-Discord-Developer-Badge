@@ -372,6 +372,55 @@ const commands = [
         .setDescription("View current tracking configuration")
     )
     .toJSON(),
+  // Twitch notification command
+  new SlashCommandBuilder()
+    .setName("twitch-notify")
+    .setDescription("Manage Twitch streamer notifications for your server")
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("add")
+        .setDescription("Add a Twitch streamer to monitor for this server")
+        .addStringOption((option) =>
+          option
+            .setName("streamer")
+            .setDescription("Twitch streamer username to monitor")
+            .setRequired(true)
+        )
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Discord channel to send notifications to")
+            .setRequired(false)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("remove")
+        .setDescription("Stop monitoring a Twitch streamer")
+        .addStringOption((option) =>
+          option
+            .setName("streamer")
+            .setDescription("Twitch streamer username to stop monitoring")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("list")
+        .setDescription("List all monitored streamers for this server")
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("channel")
+        .setDescription("Set default notification channel for this server")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Discord channel for Twitch notifications")
+            .setRequired(true)
+        )
+    )
+    .toJSON(),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);

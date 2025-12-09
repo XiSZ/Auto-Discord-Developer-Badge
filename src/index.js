@@ -3,12 +3,14 @@ import {
   GatewayIntentBits,
   ActivityType,
   version as discordVersion,
+  EmbedBuilder,
 } from "discord.js";
 import dotenv from "dotenv";
 import { exec } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import TwitchAPI from "./twitch-api.js";
 
 dotenv.config();
 
@@ -50,6 +52,48 @@ const botStartTime = Date.now();
 
 // Tracking configuration per guild
 const trackingConfig = new Map();
+
+// Twitch API instance
+let twitchAPI = null;
+
+// Twitch monitored streamers per guild
+const twitchStreamers = new Map(); // Map<guildId, Set<streamerUsername>>
+const twitchNotificationChannels = new Map(); // Map<guildId, channelId>
+const twitchStreamStatus = new Map(); // Map<streamerUsername, isLive>
+const TWITCH_DATA_FILE = join(__dirname, "twitch-data.json");
+
+// Load Twitch data from file
+function loadTwitchData() {
+  if (existsSync(TWITCH_DATA_FILE)) {
+    try {
+      const data = JSON.parse(readFileSync(TWITCH_DATA_FILE, "utf-8"));
+      // Restore Maps from JSON
+      Object.entries(data.streamers || {}).forEach(([guildId, streamers]) => {
+        twitchStreamers.set(guildId, new Set(streamers));
+      });
+      Object.entries(data.channels || {}).forEach(([guildId, channelId]) => {
+        twitchNotificationChannels.set(guildId, channelId);
+      });
+      console.log("✅ Loaded Twitch configuration from file");
+    } catch (error) {
+      console.error("❌ Error loading Twitch data:", error);
+    }
+  }
+}
+
+// Save Twitch data to file
+function saveTwitchData() {
+  const data = {
+    streamers: Object.fromEntries(
+      Array.from(twitchStreamers.entries()).map(([guildId, streamers]) => [
+        guildId,
+        Array.from(streamers),
+      ])
+    ),
+    channels: Object.fromEntries(twitchNotificationChannels),
+  };
+  writeFileSync(TWITCH_DATA_FILE, JSON.stringify(data, null, 2));
+}
 
 // Moderator role names that can use moderation commands (customize as needed)
 const MODERATOR_ROLE_NAMES = [
@@ -272,6 +316,78 @@ function setupAutoExecution() {
   );
 }
 
+// Check Twitch streamers for live status
+async function checkTwitchStreamers() {
+  if (!twitchAPI || twitchStreamers.size === 0) return;
+
+  for (const [guildId, streamers] of twitchStreamers.entries()) {
+    const channelId = twitchNotificationChannels.get(guildId);
+    if (!channelId) continue;
+
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) continue;
+
+      for (const streamer of streamers) {
+        const streamInfo = await twitchAPI.getStreamInfo(streamer);
+        const wasLive = twitchStreamStatus.get(streamer);
+        const isLive = streamInfo !== null;
+
+        // If streamer went live, send notification
+        if (isLive && !wasLive) {
+          const embed = new EmbedBuilder()
+            .setColor(0x9146ff) // Twitch purple
+            .setTitle(`🔴 ${streamInfo.user_name} is now LIVE on Twitch!`)
+            .setDescription(streamInfo.title || "No title provided")
+            .setURL(`https://twitch.tv/${streamInfo.user_login}`)
+            .addFields(
+              {
+                name: "Game",
+                value: streamInfo.game_name || "Unknown",
+                inline: true,
+              },
+              {
+                name: "Viewers",
+                value: streamInfo.viewer_count.toString(),
+                inline: true,
+              },
+              {
+                name: "Started",
+                value: `<t:${Math.floor(
+                  new Date(streamInfo.started_at).getTime() / 1000
+                )}:R>`,
+                inline: false,
+              }
+            )
+            .setImage(
+              streamInfo.thumbnail_url
+                .replace("{width}", "640")
+                .replace("{height}", "360")
+            )
+            .setTimestamp();
+
+          await channel.send({
+            embeds: [embed],
+            content: `🔔 **${streamInfo.user_name}** is now streaming!`,
+          });
+
+          console.log(
+            `🔴 Sent live notification for ${streamInfo.user_name} in guild ${guildId}`
+          );
+        }
+
+        // Update status
+        twitchStreamStatus.set(streamer, isLive);
+      }
+    } catch (error) {
+      console.error(
+        `❌ Error checking Twitch streamers for guild ${guildId}:`,
+        error
+      );
+    }
+  }
+}
+
 // Open invite-bot.html in default browser
 function openInviteBotGuide() {
   const htmlPath = join(__dirname, "..", "invite-bot.html");
@@ -336,6 +452,23 @@ client.once("clientReady", () => {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("🎯 Discord Active Developer Badge Auto-Maintenance Bot");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+  // Initialize Twitch API if credentials are available
+  if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_ACCESS_TOKEN) {
+    twitchAPI = new TwitchAPI(
+      process.env.TWITCH_CLIENT_ID,
+      process.env.TWITCH_ACCESS_TOKEN
+    );
+    loadTwitchData();
+    console.log("✅ Twitch notifications enabled");
+
+    // Start Twitch polling every 60 seconds
+    setInterval(checkTwitchStreamers, 60000);
+  } else {
+    console.log(
+      "⚠️ Twitch notifications disabled (missing TWITCH_CLIENT_ID or TWITCH_ACCESS_TOKEN in .env)"
+    );
+  }
 
   // Set initial rich presence
   updateRichPresence();
@@ -1585,6 +1718,154 @@ client.on("interactionCreate", async (interaction) => {
           }`,
         ephemeral: true,
       });
+    }
+  }
+
+  // Twitch notification command
+  if (interaction.commandName === "twitch-notify") {
+    if (!twitchAPI) {
+      await interaction.reply({
+        content:
+          "❌ Twitch notifications are not configured. Please add `TWITCH_CLIENT_ID` and `TWITCH_ACCESS_TOKEN` to your .env file.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const guildId = interaction.guild.id;
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "add") {
+      const streamerName = interaction.options
+        .getString("streamer")
+        .toLowerCase();
+      const notificationChannel =
+        interaction.options.getChannel("channel") || interaction.channel;
+
+      // Validate Twitch user exists
+      const user = await twitchAPI.getUser(streamerName);
+      if (!user) {
+        await interaction.reply({
+          content: `❌ Twitch user **${streamerName}** not found. Please check the username.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Initialize guild's streamer list if not exists
+      if (!twitchStreamers.has(guildId)) {
+        twitchStreamers.set(guildId, new Set());
+      }
+
+      const streamers = twitchStreamers.get(guildId);
+
+      if (streamers.has(streamerName)) {
+        await interaction.reply({
+          content: `⚠️ **${user.display_name}** is already being monitored in this server.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      streamers.add(streamerName);
+      twitchNotificationChannels.set(guildId, notificationChannel.id);
+      saveTwitchData();
+
+      await interaction.reply({
+        content:
+          `✅ Now monitoring **${user.display_name}** (${user.login})\n` +
+          `📢 Notifications will be sent to ${notificationChannel}\n` +
+          `🔍 Checking status every 60 seconds`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `✅ Added Twitch streamer ${streamerName} to ${interaction.guild.name}`
+      );
+    } else if (subcommand === "remove") {
+      const streamerName = interaction.options
+        .getString("streamer")
+        .toLowerCase();
+
+      if (!twitchStreamers.has(guildId)) {
+        await interaction.reply({
+          content: "❌ No streamers are being monitored in this server.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const streamers = twitchStreamers.get(guildId);
+
+      if (!streamers.has(streamerName)) {
+        await interaction.reply({
+          content: `❌ **${streamerName}** is not being monitored in this server.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      streamers.delete(streamerName);
+      saveTwitchData();
+
+      await interaction.reply({
+        content: `✅ Stopped monitoring **${streamerName}**`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `✅ Removed Twitch streamer ${streamerName} from ${interaction.guild.name}`
+      );
+    } else if (subcommand === "list") {
+      const streamers = twitchStreamers.get(guildId);
+
+      if (!streamers || streamers.size === 0) {
+        await interaction.reply({
+          content: "📭 No streamers are being monitored in this server.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const streamerList = Array.from(streamers).join(", ");
+      const channel = twitchNotificationChannels.get(guildId);
+      const notifChannel = channel
+        ? await client.channels.fetch(channel).catch(() => null)
+        : null;
+
+      await interaction.reply({
+        content:
+          `📺 **Monitored Streamers for ${interaction.guild.name}**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `🎮 ${streamerList}\n` +
+          `📢 Notification Channel: ${
+            notifChannel ? notifChannel.toString() : "❌ Not set"
+          }\n` +
+          `Total: ${streamers.size}`,
+        ephemeral: true,
+      });
+    } else if (subcommand === "channel") {
+      const channel = interaction.options.getChannel("channel");
+
+      if (!channel.isTextBased()) {
+        await interaction.reply({
+          content: "❌ Please select a text channel.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      twitchNotificationChannels.set(guildId, channel.id);
+      saveTwitchData();
+
+      await interaction.reply({
+        content: `✅ Twitch notifications will be sent to ${channel}`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`
+      );
     }
   }
 });
