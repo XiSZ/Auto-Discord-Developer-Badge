@@ -340,6 +340,38 @@ const commands = [
         .setRequired(true)
     )
     .toJSON(),
+  // Tracking command
+  new SlashCommandBuilder()
+    .setName("tracking")
+    .setDescription("Configure guild activity tracking")
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("toggle")
+        .setDescription("Enable or disable activity tracking")
+        .addBooleanOption((option) =>
+          option
+            .setName("enabled")
+            .setDescription("Enable (true) or disable (false) tracking")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("channel")
+        .setDescription("Set the channel for tracking logs")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Channel to send tracking logs to")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("status")
+        .setDescription("View current tracking configuration")
+    )
+    .toJSON(),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);

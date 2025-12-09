@@ -20,6 +20,11 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildModeration,
   ],
 });
 
@@ -42,6 +47,75 @@ let lastExecutionTime = Date.now();
 
 // Track bot start time for uptime calculation
 const botStartTime = Date.now();
+
+// Tracking configuration per guild
+const trackingConfig = new Map();
+
+// Moderator role names that can use moderation commands (customize as needed)
+const MODERATOR_ROLE_NAMES = [
+  "Moderator",
+  "Mod",
+  "Admin",
+  "Administrator",
+  "Staff",
+  "Helper",
+];
+
+// Helper function to check if user has required permission or is admin/mod
+function hasPermissionOrRole(member, permission) {
+  // Check if user is Administrator
+  if (member.permissions.has("Administrator")) {
+    return true;
+  }
+
+  // Check if user has the specific permission
+  if (member.permissions.has(permission)) {
+    return true;
+  }
+
+  // Check if user has any moderator role
+  const hasModerationRole = member.roles.cache.some((role) =>
+    MODERATOR_ROLE_NAMES.some(
+      (modRoleName) => role.name.toLowerCase() === modRoleName.toLowerCase()
+    )
+  );
+
+  return hasModerationRole;
+}
+
+// Helper function to check if tracking is enabled for a guild
+function isTrackingEnabled(guildId) {
+  return trackingConfig.get(guildId)?.enabled || false;
+}
+
+// Helper function to get log channel for a guild
+function getLogChannel(guildId) {
+  return trackingConfig.get(guildId)?.channelId || null;
+}
+
+// Helper function to log tracking events
+async function logTrackingEvent(guildId, message, embed = null) {
+  if (!isTrackingEnabled(guildId)) return;
+
+  const channelId = getLogChannel(guildId);
+  if (!channelId) {
+    console.log(message);
+    return;
+  }
+
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (channel && channel.isTextBased()) {
+      if (embed) {
+        await channel.send({ embeds: [embed] });
+      } else {
+        await channel.send(message);
+      }
+    }
+  } catch (error) {
+    console.log(message);
+  }
+}
 
 // Function to format uptime
 function getUptime() {
@@ -318,6 +392,9 @@ client.on("interactionCreate", async (interaction) => {
         `\`/backup\` – View server backup info\n` +
         `\`/banlist\` – View banned users\n` +
         `\`/clear-warnings <user>\` – Clear user warnings\n` +
+        `\`/tracking toggle\` – Enable/disable activity tracking\n` +
+        `\`/tracking channel\` – Set tracking log channel\n` +
+        `\`/tracking status\` – View tracking configuration\n` +
         `\`/help\` – Show this message`,
       ephemeral: true,
     });
@@ -371,11 +448,11 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (interaction.commandName === "purge") {
-    // Check if user has permission to manage messages
-    if (!interaction.memberPermissions.has("ManageMessages")) {
+    // Check if user has permission to manage messages or is admin/mod
+    if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
       await interaction.reply({
         content:
-          '❌ You need the "Manage Messages" permission to use this command.',
+          '❌ You need the "Manage Messages" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -572,10 +649,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Lock command
   if (interaction.commandName === "lock") {
-    if (!interaction.memberPermissions.has("ManageChannels")) {
+    if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
-          '❌ You need the "Manage Channels" permission to use this command.',
+          '❌ You need the "Manage Channels" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -606,10 +683,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Unlock command
   if (interaction.commandName === "unlock") {
-    if (!interaction.memberPermissions.has("ManageChannels")) {
+    if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
-          '❌ You need the "Manage Channels" permission to use this command.',
+          '❌ You need the "Manage Channels" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -642,10 +719,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Slowmode command
   if (interaction.commandName === "slowmode") {
-    if (!interaction.memberPermissions.has("ManageChannels")) {
+    if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
-          '❌ You need the "Manage Channels" permission to use this command.',
+          '❌ You need the "Manage Channels" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -678,10 +755,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Kick command
   if (interaction.commandName === "kick") {
-    if (!interaction.memberPermissions.has("KickMembers")) {
+    if (!hasPermissionOrRole(interaction.member, "KickMembers")) {
       await interaction.reply({
         content:
-          '❌ You need the "Kick Members" permission to use this command.',
+          '❌ You need the "Kick Members" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -719,10 +796,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Ban command
   if (interaction.commandName === "ban") {
-    if (!interaction.memberPermissions.has("BanMembers")) {
+    if (!hasPermissionOrRole(interaction.member, "BanMembers")) {
       await interaction.reply({
         content:
-          '❌ You need the "Ban Members" permission to use this command.',
+          '❌ You need the "Ban Members" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -760,10 +837,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Mute command
   if (interaction.commandName === "mute") {
-    if (!interaction.memberPermissions.has("ModerateMembers")) {
+    if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
-          '❌ You need the "Moderate Members" permission to use this command.',
+          '❌ You need the "Moderate Members" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -806,10 +883,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Unmute command
   if (interaction.commandName === "unmute") {
-    if (!interaction.memberPermissions.has("ModerateMembers")) {
+    if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
-          '❌ You need the "Moderate Members" permission to use this command.',
+          '❌ You need the "Moderate Members" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -845,10 +922,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Warn command
   if (interaction.commandName === "warn") {
-    if (!interaction.memberPermissions.has("ModerateMembers")) {
+    if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
-          '❌ You need the "Moderate Members" permission to use this command.',
+          '❌ You need the "Moderate Members" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -875,10 +952,10 @@ client.on("interactionCreate", async (interaction) => {
 
   // Say command
   if (interaction.commandName === "say") {
-    if (!interaction.memberPermissions.has("ManageMessages")) {
+    if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
       await interaction.reply({
         content:
-          '❌ You need the "Manage Messages" permission to use this command.',
+          '❌ You need the "Manage Messages" permission or a Moderator role to use this command.',
         ephemeral: true,
       });
       return;
@@ -1421,6 +1498,95 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
   }
+
+  // Tracking command
+  if (interaction.commandName === "tracking") {
+    if (!interaction.memberPermissions.has("Administrator")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Administrator" permission to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const subcommand = interaction.options.getSubcommand();
+    const guildId = interaction.guild.id;
+
+    if (subcommand === "toggle") {
+      const enabled = interaction.options.getBoolean("enabled");
+
+      if (!trackingConfig.has(guildId)) {
+        trackingConfig.set(guildId, { enabled: false, channelId: null });
+      }
+
+      trackingConfig.get(guildId).enabled = enabled;
+
+      await interaction.reply({
+        content: `✅ Guild activity tracking has been **${
+          enabled ? "enabled" : "disabled"
+        }**.${
+          enabled && !trackingConfig.get(guildId).channelId
+            ? "\n💡 Tip: Set a log channel with `/tracking channel` to send logs to a specific channel."
+            : ""
+        }`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${interaction.user.tag} ${
+          enabled ? "enabled" : "disabled"
+        } tracking in ${interaction.guild.name}`
+      );
+    } else if (subcommand === "channel") {
+      const channel = interaction.options.getChannel("channel");
+
+      if (!channel.isTextBased()) {
+        await interaction.reply({
+          content: "❌ Please select a text channel.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (!trackingConfig.has(guildId)) {
+        trackingConfig.set(guildId, { enabled: false, channelId: null });
+      }
+
+      trackingConfig.get(guildId).channelId = channel.id;
+
+      await interaction.reply({
+        content: `✅ Tracking logs will now be sent to ${channel}.${
+          !trackingConfig.get(guildId).enabled
+            ? "\n💡 Tip: Enable tracking with `/tracking toggle enabled:True`"
+            : ""
+        }`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${interaction.user.tag} set tracking channel to #${channel.name} in ${interaction.guild.name}`
+      );
+    } else if (subcommand === "status") {
+      const config = trackingConfig.get(guildId);
+      const enabled = config?.enabled || false;
+      const channelId = config?.channelId;
+      const channel = channelId
+        ? await client.channels.fetch(channelId).catch(() => null)
+        : null;
+
+      await interaction.reply({
+        content:
+          `📊 **Tracking Status for ${interaction.guild.name}**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `🔘 **Status:** ${enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
+          `📢 **Log Channel:** ${
+            channel ? `${channel}` : "❌ Not set (logs to console)"
+          }`,
+        ephemeral: true,
+      });
+    }
+  }
 });
 
 // Prefix command handler
@@ -1542,6 +1708,349 @@ client.on("messageCreate", async (message) => {
     }
   }
 });
+
+// ============================================
+// GUILD ACTIVITY TRACKING
+// ============================================
+
+// Track message deletions
+client.on("messageDelete", async (message) => {
+  if (message.partial || !message.guild) return;
+  const msg = `🗑️ [MESSAGE DELETE] ${
+    message.author?.tag || "Unknown"
+  } deleted message in #${message.channel.name}: "${message.content?.substring(
+    0,
+    50
+  )}${message.content?.length > 50 ? "..." : ""}"`;
+  await logTrackingEvent(message.guild.id, msg);
+});
+
+// Track bulk message deletions
+client.on("messageDeleteBulk", async (messages) => {
+  const channel = messages.first()?.channel;
+  if (!channel?.guild) return;
+  const msg = `🗑️ [BULK DELETE] ${messages.size} messages deleted in #${channel.name}`;
+  await logTrackingEvent(channel.guild.id, msg);
+});
+
+// Track message edits
+client.on("messageUpdate", async (oldMessage, newMessage) => {
+  if (oldMessage.partial || newMessage.partial || !newMessage.guild) return;
+  if (oldMessage.content === newMessage.content) return; // Ignore embed updates
+
+  const msg = `✏️ [MESSAGE EDIT] ${newMessage.author?.tag} in #${
+    newMessage.channel.name
+  }\n   Old: "${oldMessage.content?.substring(0, 50)}${
+    oldMessage.content?.length > 50 ? "..." : ""
+  }"\n   New: "${newMessage.content?.substring(0, 50)}${
+    newMessage.content?.length > 50 ? "..." : ""
+  }"`;
+  await logTrackingEvent(newMessage.guild.id, msg);
+});
+
+// Track members joining
+client.on("guildMemberAdd", async (member) => {
+  const msg = `➕ [MEMBER JOIN] ${member.user.tag} (${
+    member.id
+  })\n   Account created: ${member.user.createdAt.toLocaleString()}`;
+  await logTrackingEvent(member.guild.id, msg);
+});
+
+// Track members leaving
+client.on("guildMemberRemove", async (member) => {
+  const msg = `➖ [MEMBER LEAVE] ${member.user.tag} (${member.id})`;
+  await logTrackingEvent(member.guild.id, msg);
+});
+
+// Track member updates (nickname, roles, avatar, etc.)
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+  const changes = [];
+
+  if (oldMember.nickname !== newMember.nickname) {
+    changes.push(
+      `Nickname: "${oldMember.nickname || "None"}" → "${
+        newMember.nickname || "None"
+      }"`
+    );
+  }
+
+  // Track server avatar changes
+  if (oldMember.avatar !== newMember.avatar) {
+    const oldAvatar = oldMember.avatarURL({ size: 128 }) || "None";
+    const newAvatar = newMember.avatarURL({ size: 128 }) || "None";
+    changes.push(`Server Avatar: Changed`);
+    const msg = `🖼️ [AVATAR CHANGE] ${newMember.user.tag} changed server avatar\n   Old: ${oldAvatar}\n   New: ${newAvatar}`;
+    await logTrackingEvent(newMember.guild.id, msg);
+  }
+
+  const addedRoles = newMember.roles.cache.filter(
+    (role) => !oldMember.roles.cache.has(role.id)
+  );
+  const removedRoles = oldMember.roles.cache.filter(
+    (role) => !newMember.roles.cache.has(role.id)
+  );
+
+  if (addedRoles.size > 0) {
+    const rolesList = addedRoles.map((r) => r.name).join(", ");
+    changes.push(`Added roles: ${rolesList}`);
+    const msg = `🎭 [ROLE CLAIM] ${newMember.user.tag} claimed role(s): ${rolesList}`;
+    await logTrackingEvent(newMember.guild.id, msg);
+  }
+  if (removedRoles.size > 0) {
+    const rolesList = removedRoles.map((r) => r.name).join(", ");
+    changes.push(`Removed roles: ${rolesList}`);
+    const msg = `🎭 [ROLE REMOVE] ${newMember.user.tag} lost role(s): ${rolesList}`;
+    await logTrackingEvent(newMember.guild.id, msg);
+  }
+
+  if (changes.length > 0 && !addedRoles.size && !removedRoles.size) {
+    const msg = `👤 [MEMBER UPDATE] ${newMember.user.tag}\n   ${changes.join(
+      "\n   "
+    )}`;
+    await logTrackingEvent(newMember.guild.id, msg);
+  }
+});
+
+// Track user profile updates (global avatar, username, discriminator)
+client.on("userUpdate", async (oldUser, newUser) => {
+  const changes = [];
+
+  if (oldUser.username !== newUser.username) {
+    changes.push(`Username: "${oldUser.username}" → "${newUser.username}"`);
+  }
+
+  if (oldUser.discriminator !== newUser.discriminator) {
+    changes.push(
+      `Discriminator: #${oldUser.discriminator} → #${newUser.discriminator}`
+    );
+  }
+
+  if (oldUser.avatar !== newUser.avatar) {
+    const oldAvatar = oldUser.displayAvatarURL({ size: 128 });
+    const newAvatar = newUser.displayAvatarURL({ size: 128 });
+    changes.push(`Global Avatar: Changed`);
+
+    // Log to all guilds where bot and user both exist
+    for (const [guildId, guild] of client.guilds.cache) {
+      if (guild.members.cache.has(newUser.id)) {
+        const msg = `🖼️ [GLOBAL AVATAR] ${newUser.tag} changed their global avatar\n   Old: ${oldAvatar}\n   New: ${newAvatar}`;
+        await logTrackingEvent(guildId, msg);
+      }
+    }
+  }
+
+  if (oldUser.banner !== newUser.banner) {
+    changes.push(`Banner: Changed`);
+  }
+
+  if (changes.length > 0 && !changes.some((c) => c.includes("Avatar"))) {
+    // Log username/discriminator changes to all mutual guilds
+    for (const [guildId, guild] of client.guilds.cache) {
+      if (guild.members.cache.has(newUser.id)) {
+        const msg = `👤 [USER UPDATE] ${
+          newUser.tag
+        } updated their profile\n   ${changes.join("\n   ")}`;
+        await logTrackingEvent(guildId, msg);
+      }
+    }
+  }
+});
+
+// Track voice channel activity
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  const member = newState.member;
+  if (!newState.guild) return;
+
+  if (!oldState.channel && newState.channel) {
+    const msg = `🔊 [VOICE JOIN] ${member.user.tag} joined voice channel "${newState.channel.name}"`;
+    await logTrackingEvent(newState.guild.id, msg);
+  } else if (oldState.channel && !newState.channel) {
+    const msg = `🔇 [VOICE LEAVE] ${member.user.tag} left voice channel "${oldState.channel.name}"`;
+    await logTrackingEvent(oldState.guild.id, msg);
+  } else if (
+    oldState.channel &&
+    newState.channel &&
+    oldState.channel.id !== newState.channel.id
+  ) {
+    const msg = `🔀 [VOICE SWITCH] ${member.user.tag} moved from "${oldState.channel.name}" to "${newState.channel.name}"`;
+    await logTrackingEvent(newState.guild.id, msg);
+  }
+
+  // Track mute/unmute
+  if (oldState.serverMute !== newState.serverMute) {
+    const msg = `🔇 [VOICE MUTE] ${member.user.tag} was ${
+      newState.serverMute ? "server muted" : "server unmuted"
+    }`;
+    await logTrackingEvent(newState.guild.id, msg);
+  }
+
+  if (oldState.serverDeaf !== newState.serverDeaf) {
+    const msg = `🔇 [VOICE DEAF] ${member.user.tag} was ${
+      newState.serverDeaf ? "server deafened" : "server undeafened"
+    }`;
+    await logTrackingEvent(newState.guild.id, msg);
+  }
+});
+
+// Track reactions
+client.on("messageReactionAdd", async (reaction, user) => {
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (error) {
+      return;
+    }
+  }
+  if (!reaction.message.guild) return;
+
+  const msg = `👍 [REACTION ADD] ${user.tag} added ${reaction.emoji.name} to message in #${reaction.message.channel.name}`;
+  await logTrackingEvent(reaction.message.guild.id, msg);
+});
+
+client.on("messageReactionRemove", async (reaction, user) => {
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (error) {
+      return;
+    }
+  }
+  if (!reaction.message.guild) return;
+
+  const msg = `👎 [REACTION REMOVE] ${user.tag} removed ${reaction.emoji.name} from message in #${reaction.message.channel.name}`;
+  await logTrackingEvent(reaction.message.guild.id, msg);
+});
+
+// Track channel creation
+client.on("channelCreate", async (channel) => {
+  if (!channel.guild) return;
+  const msg = `➕ [CHANNEL CREATE] Channel "#${channel.name}" created (Type: ${channel.type})`;
+  await logTrackingEvent(channel.guild.id, msg);
+});
+
+// Track channel deletion
+client.on("channelDelete", async (channel) => {
+  if (!channel.guild) return;
+  const msg = `➖ [CHANNEL DELETE] Channel "#${channel.name}" deleted`;
+  await logTrackingEvent(channel.guild.id, msg);
+});
+
+// Track channel updates
+client.on("channelUpdate", async (oldChannel, newChannel) => {
+  if (!newChannel.guild) return;
+
+  const changes = [];
+  if (oldChannel.name !== newChannel.name) {
+    changes.push(`Name: "${oldChannel.name}" → "${newChannel.name}"`);
+  }
+  if (oldChannel.topic !== newChannel.topic) {
+    changes.push(`Topic changed`);
+  }
+
+  if (changes.length > 0) {
+    const msg = `✏️ [CHANNEL UPDATE] #${newChannel.name}\n   ${changes.join(
+      "\n   "
+    )}`;
+    await logTrackingEvent(newChannel.guild.id, msg);
+  }
+});
+
+// Track role creation
+client.on("roleCreate", async (role) => {
+  const msg = `➕ [ROLE CREATE] Role "${role.name}" created (Color: ${role.hexColor})`;
+  await logTrackingEvent(role.guild.id, msg);
+});
+
+// Track role deletion
+client.on("roleDelete", async (role) => {
+  const msg = `➖ [ROLE DELETE] Role "${role.name}" deleted`;
+  await logTrackingEvent(role.guild.id, msg);
+});
+
+// Track role updates
+client.on("roleUpdate", async (oldRole, newRole) => {
+  const changes = [];
+  if (oldRole.name !== newRole.name) {
+    changes.push(`Name: "${oldRole.name}" → "${newRole.name}"`);
+  }
+  if (oldRole.hexColor !== newRole.hexColor) {
+    changes.push(`Color: ${oldRole.hexColor} → ${newRole.hexColor}`);
+  }
+  if (oldRole.permissions.bitfield !== newRole.permissions.bitfield) {
+    changes.push(`Permissions modified`);
+  }
+
+  if (changes.length > 0) {
+    const msg = `✏️ [ROLE UPDATE] Role "${newRole.name}"\n   ${changes.join(
+      "\n   "
+    )}`;
+    await logTrackingEvent(newRole.guild.id, msg);
+  }
+});
+
+// Track bans
+client.on("guildBanAdd", async (ban) => {
+  const msg = `🔨 [BAN] ${ban.user.tag} (${ban.user.id}) was banned${
+    ban.reason ? `\n   Reason: ${ban.reason}` : ""
+  }`;
+  await logTrackingEvent(ban.guild.id, msg);
+});
+
+// Track unbans
+client.on("guildBanRemove", async (ban) => {
+  const msg = `✅ [UNBAN] ${ban.user.tag} (${ban.user.id}) was unbanned`;
+  await logTrackingEvent(ban.guild.id, msg);
+});
+
+// Track emoji creation
+client.on("emojiCreate", async (emoji) => {
+  const msg = `😀 [EMOJI CREATE] Emoji "${emoji.name}" created`;
+  await logTrackingEvent(emoji.guild.id, msg);
+});
+
+// Track emoji deletion
+client.on("emojiDelete", async (emoji) => {
+  const msg = `😢 [EMOJI DELETE] Emoji "${emoji.name}" deleted`;
+  await logTrackingEvent(emoji.guild.id, msg);
+});
+
+// Track when bot joins a server
+client.on("guildCreate", async (guild) => {
+  console.log(
+    `🎉 [BOT JOIN] Bot joined new server: ${guild.name} (${guild.id})`
+  );
+  console.log(`   Members: ${guild.memberCount}`);
+  console.log(`   Owner: ${(await guild.fetchOwner()).user.tag}`);
+});
+
+// Track when bot leaves a server
+client.on("guildDelete", async (guild) => {
+  console.log(
+    `👋 [BOT LEAVE] Bot removed from server: ${guild.name} (${guild.id})`
+  );
+});
+
+// Track invites created
+client.on("inviteCreate", async (invite) => {
+  if (!invite.guild) return;
+  const msg = `📧 [INVITE CREATE] Invite created by ${
+    invite.inviter?.tag || "Unknown"
+  }\n   Code: ${invite.code} | Max uses: ${invite.maxUses || "∞"} | Expires: ${
+    invite.expiresAt?.toLocaleString() || "Never"
+  }`;
+  await logTrackingEvent(invite.guild.id, msg);
+});
+
+// Track invites deleted
+client.on("inviteDelete", async (invite) => {
+  if (!invite.guild) return;
+  const msg = `📧 [INVITE DELETE] Invite ${invite.code} deleted`;
+  await logTrackingEvent(invite.guild.id, msg);
+});
+
+// ============================================
+// END GUILD ACTIVITY TRACKING
+// ============================================
 
 // Error handling
 client.on("error", (error) => {
