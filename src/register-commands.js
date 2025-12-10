@@ -389,6 +389,58 @@ const commands = [
         .setName("status")
         .setDescription("View current tracking configuration")
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("ignore-channel")
+        .setDescription("Add or remove a channel from tracking ignore list")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Channel to ignore")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("events")
+        .setDescription("Configure which event types to track")
+        .addBooleanOption((option) =>
+          option
+            .setName("messages")
+            .setDescription("Track message events (send, edit, delete)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("members")
+            .setDescription("Track member events (join, leave, role changes)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("voice")
+            .setDescription("Track voice channel events (join, leave, mute)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("reactions")
+            .setDescription("Track reaction events")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("channels")
+            .setDescription("Track channel create/delete events")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("user-updates")
+            .setDescription("Track user profile updates (avatar, username)")
+            .setRequired(false)
+        )
+    )
     .toJSON(),
   // Twitch notification command
   new SlashCommandBuilder()

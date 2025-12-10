@@ -212,6 +212,15 @@ function loadTrackingData() {
             trackingConfig.set(guildId, {
               enabled: data.enabled || false,
               channelId: data.channelId || null,
+              ignoredChannels: data.ignoredChannels || [],
+              events: {
+                messages: data.events?.messages !== false,
+                members: data.events?.members !== false,
+                voice: data.events?.voice !== false,
+                reactions: data.events?.reactions !== false,
+                channels: data.events?.channels !== false,
+                userUpdates: data.events?.userUpdates !== false,
+              },
             });
 
             // Get server name if available
@@ -251,6 +260,15 @@ function saveTrackingData(guildId) {
     const data = {
       enabled: config?.enabled || false,
       channelId: config?.channelId || null,
+      ignoredChannels: config?.ignoredChannels || [],
+      events: config?.events || {
+        messages: true,
+        members: true,
+        voice: true,
+        reactions: true,
+        channels: true,
+        userUpdates: true,
+      },
     };
 
     writeFileSync(configPath, JSON.stringify(data, null, 2));
@@ -339,17 +357,47 @@ function createTrackingEmbed(
 }
 
 // Helper function to log tracking events
-async function logTrackingEvent(guildId, message, embed = null) {
+async function logTrackingEvent(guildId, message, embed = null, eventType = null, channelId = null) {
   if (!isTrackingEnabled(guildId)) return;
 
-  const channelId = getLogChannel(guildId);
-  if (!channelId) {
+  // Check if event type is enabled
+  if (eventType) {
+    const config = trackingConfig.get(guildId);
+    const eventConfig = config?.events;
+    
+    if (eventConfig) {
+      const eventTypeMap = {
+        message: "messages",
+        member: "members",
+        voice: "voice",
+        reaction: "reactions",
+        channel: "channels",
+        userUpdate: "userUpdates",
+      };
+      
+      const eventKey = eventTypeMap[eventType];
+      if (eventKey && !eventConfig[eventKey]) {
+        return; // Event type is disabled
+      }
+    }
+  }
+
+  // Check if channel is ignored
+  if (channelId) {
+    const config = trackingConfig.get(guildId);
+    if (config?.ignoredChannels?.includes(channelId)) {
+      return; // Channel is ignored
+    }
+  }
+
+  const logChannelId = getLogChannel(guildId);
+  if (!logChannelId) {
     console.log(message);
     return;
   }
 
   try {
-    const channel = await client.channels.fetch(channelId);
+    const channel = await client.channels.fetch(logChannelId);
     if (channel && channel.isTextBased()) {
       if (embed) {
         await channel.send({ embeds: [embed] });
@@ -2054,17 +2102,144 @@ client.on("interactionCreate", async (interaction) => {
       const channel = channelId
         ? await client.channels.fetch(channelId).catch(() => null)
         : null;
+      const ignoredChannels = config?.ignoredChannels || [];
+      const events = config?.events || {
+        messages: true,
+        members: true,
+        voice: true,
+        reactions: true,
+        channels: true,
+        userUpdates: true,
+      };
+
+      const ignoredChannelsStr = ignoredChannels.length > 0 
+        ? ignoredChannels.map(id => `<#${id}>`).join(", ")
+        : "None";
+
+      const eventStatus = [
+        `Messages: ${events.messages ? "✅" : "❌"}`,
+        `Members: ${events.members ? "✅" : "❌"}`,
+        `Voice: ${events.voice ? "✅" : "❌"}`,
+        `Reactions: ${events.reactions ? "✅" : "❌"}`,
+        `Channels: ${events.channels ? "✅" : "❌"}`,
+        `User Updates: ${events.userUpdates ? "✅" : "❌"}`,
+      ].join("\n");
 
       await interaction.reply({
         content:
           `📊 **Tracking Status for ${interaction.guild.name}**\n` +
           `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
           `🔘 **Status:** ${enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
-          `📢 **Log Channel:** ${
-            channel ? `${channel}` : "❌ Not set (logs to console)"
-          }`,
+          `📢 **Log Channel:** ${channel ? `${channel}` : "❌ Not set (logs to console)"}\n` +
+          `🚫 **Ignored Channels:** ${ignoredChannelsStr}\n\n` +
+          `📋 **Event Types:**\n${eventStatus}`,
         ephemeral: true,
       });
+    } else if (subcommand === "ignore-channel") {
+      const channel = interaction.options.getChannel("channel");
+
+      if (!trackingConfig.has(guildId)) {
+        trackingConfig.set(guildId, {
+          enabled: false,
+          channelId: null,
+          ignoredChannels: [],
+          events: {
+            messages: true,
+            members: true,
+            voice: true,
+            reactions: true,
+            channels: true,
+            userUpdates: true,
+          },
+        });
+      }
+
+      const config = trackingConfig.get(guildId);
+      const ignoredChannels = config.ignoredChannels || [];
+      const index = ignoredChannels.indexOf(channel.id);
+
+      if (index > -1) {
+        ignoredChannels.splice(index, 1);
+        await interaction.reply({
+          content: `✅ ${channel} has been **removed** from the tracking ignore list.`,
+          ephemeral: true,
+        });
+        console.log(
+          `🔄 ${interaction.user.tag} removed ${channel.name} from ignore list in ${interaction.guild.name}`
+        );
+      } else {
+        ignoredChannels.push(channel.id);
+        await interaction.reply({
+          content: `✅ ${channel} has been **added** to the tracking ignore list.`,
+          ephemeral: true,
+        });
+        console.log(
+          `🔄 ${interaction.user.tag} added ${channel.name} to ignore list in ${interaction.guild.name}`
+        );
+      }
+
+      config.ignoredChannels = ignoredChannels;
+      saveTrackingData(guildId);
+    } else if (subcommand === "events") {
+      if (!trackingConfig.has(guildId)) {
+        trackingConfig.set(guildId, {
+          enabled: false,
+          channelId: null,
+          ignoredChannels: [],
+          events: {
+            messages: true,
+            members: true,
+            voice: true,
+            reactions: true,
+            channels: true,
+            userUpdates: true,
+          },
+        });
+      }
+
+      const config = trackingConfig.get(guildId);
+      const events = config.events;
+      let updatedAny = false;
+
+      const eventOptions = [
+        { key: "messages", option: "messages" },
+        { key: "members", option: "members" },
+        { key: "voice", option: "voice" },
+        { key: "reactions", option: "reactions" },
+        { key: "channels", option: "channels" },
+        { key: "userUpdates", option: "user-updates" },
+      ];
+
+      const changes = [];
+
+      for (const { key, option } of eventOptions) {
+        const value = interaction.options.getBoolean(option);
+        if (value !== null) {
+          events[key] = value;
+          updatedAny = true;
+          changes.push(`${key}: ${value ? "✅" : "❌"}`);
+        }
+      }
+
+      if (!updatedAny) {
+        await interaction.reply({
+          content: "❌ No event options were provided. Use `/tracking events` with at least one option.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      config.events = events;
+      saveTrackingData(guildId);
+
+      await interaction.reply({
+        content: `✅ Tracking event preferences updated:\n${changes.map(c => `• ${c}`).join("\n")}`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${interaction.user.tag} updated tracking events in ${interaction.guild.name}`
+      );
     }
   }
 
@@ -2380,7 +2555,7 @@ client.on("messageDelete", async (message) => {
     message.author,
     0xe74c3c
   );
-  await logTrackingEvent(message.guild.id, null, embed);
+  await logTrackingEvent(message.guild.id, null, embed, "message", message.channel.id);
 });
 
 // Track bulk message deletions
@@ -2394,7 +2569,7 @@ client.on("messageDeleteBulk", async (messages) => {
     )
     .setColor(0xe74c3c)
     .setTimestamp();
-  await logTrackingEvent(channel.guild.id, null, embed);
+  await logTrackingEvent(channel.guild.id, null, embed, "channel", channel.id);
 });
 
 // Track message edits
@@ -2414,7 +2589,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     newMessage.author,
     0xf39c12
   );
-  await logTrackingEvent(newMessage.guild.id, null, embed);
+  await logTrackingEvent(newMessage.guild.id, null, embed, "message", newMessage.channel.id);
 });
 
 // Track members joining
@@ -2425,10 +2600,7 @@ client.on("guildMemberAdd", async (member) => {
       Date.now() / 1000
     )}:F>`,
     member.user,
-    0x2ecc71
-  );
-  await logTrackingEvent(member.guild.id, null, embed);
-});
+  await logTrackingEvent(member.guild.id, null, embed, "member", null);
 
 // Track members leaving
 client.on("guildMemberRemove", async (member) => {
@@ -2438,7 +2610,7 @@ client.on("guildMemberRemove", async (member) => {
     member.user,
     0xe74c3c
   );
-  await logTrackingEvent(member.guild.id, null, embed);
+  await logTrackingEvent(member.guild.id, null, embed, "member", null);
 });
 
 // Track member updates (nickname, roles, avatar, etc.)
@@ -2464,7 +2636,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       newMember.user,
       0x9b59b6
     );
-    await logTrackingEvent(newMember.guild.id, null, embed);
+    await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
 
   const addedRoles = newMember.roles.cache.filter(
@@ -2483,7 +2655,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       newMember.user,
       0x3498db
     );
-    await logTrackingEvent(newMember.guild.id, null, embed);
+    await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
   if (removedRoles.size > 0) {
     const rolesList = removedRoles.map((r) => `<@&${r.id}>`).join(", ");
@@ -2494,7 +2666,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       newMember.user,
       0xe74c3c
     );
-    await logTrackingEvent(newMember.guild.id, null, embed);
+    await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
 
   if (changes.length > 0 && !addedRoles.size && !removedRoles.size) {
@@ -2504,7 +2676,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       newMember.user,
       0x95a5a6
     );
-    await logTrackingEvent(newMember.guild.id, null, embed);
+    await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
 });
 
@@ -2536,7 +2708,7 @@ client.on("userUpdate", async (oldUser, newUser) => {
           newUser,
           0x9b59b6
         );
-        await logTrackingEvent(guildId, null, embed);
+        await logTrackingEvent(guildId, null, embed, "userUpdate", null);
       }
     }
   }
@@ -2555,7 +2727,7 @@ client.on("userUpdate", async (oldUser, newUser) => {
           newUser,
           0xf39c12
         );
-        await logTrackingEvent(guildId, null, embed);
+        await logTrackingEvent(guildId, null, embed, "userUpdate", null);
       }
     }
   }
@@ -2573,7 +2745,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       member.user,
       0x3498db
     );
-    await logTrackingEvent(newState.guild.id, null, embed);
+    await logTrackingEvent(newState.guild.id, null, embed, "voice", newState.channel.id);
   } else if (oldState.channel && !newState.channel) {
     const embed = createTrackingEmbed(
       "🔇 Voice Channel Left",
@@ -2581,7 +2753,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       member.user,
       0x95a5a6
     );
-    await logTrackingEvent(oldState.guild.id, null, embed);
+    await logTrackingEvent(oldState.guild.id, null, embed, "voice", oldState.channel.id);
   } else if (
     oldState.channel &&
     newState.channel &&
@@ -2593,7 +2765,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       member.user,
       0xf39c12
     );
-    await logTrackingEvent(newState.guild.id, null, embed);
+    await logTrackingEvent(newState.guild.id, null, embed, "voice", newState.channel.id);
   }
 
   // Track mute/unmute
@@ -2604,7 +2776,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       member.user,
       newState.serverMute ? 0xe74c3c : 0x2ecc71
     );
-    await logTrackingEvent(newState.guild.id, null, embed);
+    await logTrackingEvent(newState.guild.id, null, embed, "voice", newState.channel?.id || null);
   }
 
   if (oldState.serverDeaf !== newState.serverDeaf) {
@@ -2614,7 +2786,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       member.user,
       newState.serverDeaf ? 0xe74c3c : 0x2ecc71
     );
-    await logTrackingEvent(newState.guild.id, null, embed);
+    await logTrackingEvent(newState.guild.id, null, embed, "voice", newState.channel?.id || null);
   }
 });
 
@@ -2635,7 +2807,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
     user,
     0x3498db
   );
-  await logTrackingEvent(reaction.message.guild.id, null, embed);
+  await logTrackingEvent(reaction.message.guild.id, null, embed, "reaction", reaction.message.channel.id);
 });
 
 client.on("messageReactionRemove", async (reaction, user) => {
@@ -2654,7 +2826,7 @@ client.on("messageReactionRemove", async (reaction, user) => {
     user,
     0x95a5a6
   );
-  await logTrackingEvent(reaction.message.guild.id, null, embed);
+  await logTrackingEvent(reaction.message.guild.id, null, embed, "reaction", reaction.message.channel.id);
 });
 
 // Track channel creation
@@ -2669,7 +2841,7 @@ client.on("channelCreate", async (channel) => {
     )
     .setColor(0x2ecc71)
     .setTimestamp();
-  await logTrackingEvent(channel.guild.id, null, embed);
+  await logTrackingEvent(channel.guild.id, null, embed, "channel", channel.id);
 });
 
 // Track channel deletion
@@ -2684,7 +2856,7 @@ client.on("channelDelete", async (channel) => {
     )
     .setColor(0xe74c3c)
     .setTimestamp();
-  await logTrackingEvent(channel.guild.id, null, embed);
+  await logTrackingEvent(channel.guild.id, null, embed, "channel", channel.id);
 });
 
 // Track channel updates
