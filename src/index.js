@@ -9,7 +9,13 @@ import dotenv from "dotenv";
 import { exec } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+} from "fs";
 import TwitchAPI from "./twitch-api.js";
 
 dotenv.config();
@@ -70,7 +76,7 @@ const twitchStreamStatus = new Map(); // Map<streamerUsername, isLive>
 // Persistent data directory - use Railway volume if available, otherwise local
 const DATA_DIR =
   process.env.RAILWAY_VOLUME_MOUNT_PATH || join(__dirname, "..", "data");
-const TWITCH_DATA_FILE = join(DATA_DIR, "twitch-data.json");
+const SERVERS_DIR = join(DATA_DIR, "servers");
 
 // Ensure data directory exists
 if (!existsSync(DATA_DIR)) {
@@ -82,41 +88,94 @@ if (!existsSync(DATA_DIR)) {
   }
 }
 
-// Load Twitch data from file
-function loadTwitchData() {
-  if (existsSync(TWITCH_DATA_FILE)) {
+// Ensure servers directory exists
+if (!existsSync(SERVERS_DIR)) {
+  try {
+    mkdirSync(SERVERS_DIR, { recursive: true });
+    console.log(`✅ Created servers directory: ${SERVERS_DIR}`);
+  } catch (error) {
+    console.error(`❌ Failed to create servers directory: ${error.message}`);
+  }
+}
+
+// Get path to server config file
+function getServerConfigPath(guildId) {
+  return join(SERVERS_DIR, guildId, "twitch-config.json");
+}
+
+// Ensure server directory exists
+function ensureServerDirectory(guildId) {
+  const serverDir = join(SERVERS_DIR, guildId);
+  if (!existsSync(serverDir)) {
     try {
-      const data = JSON.parse(readFileSync(TWITCH_DATA_FILE, "utf-8"));
-      // Restore Maps from JSON
-      Object.entries(data.streamers || {}).forEach(([guildId, streamers]) => {
-        twitchStreamers.set(guildId, new Set(streamers));
-      });
-      Object.entries(data.channels || {}).forEach(([guildId, channelId]) => {
-        twitchNotificationChannels.set(guildId, channelId);
-      });
-      console.log("✅ Loaded Twitch configuration from file");
+      mkdirSync(serverDir, { recursive: true });
     } catch (error) {
-      console.error("❌ Error loading Twitch data:", error);
+      console.error(
+        `❌ Failed to create server directory for ${guildId}:`,
+        error.message
+      );
     }
   }
 }
 
-// Save Twitch data to file
-function saveTwitchData() {
+// Load Twitch data from all server config files
+function loadTwitchData() {
+  if (!existsSync(SERVERS_DIR)) {
+    return;
+  }
+
   try {
-    const data = {
-      streamers: Object.fromEntries(
-        Array.from(twitchStreamers.entries()).map(([guildId, streamers]) => [
-          guildId,
-          Array.from(streamers),
-        ])
-      ),
-      channels: Object.fromEntries(twitchNotificationChannels),
-    };
-    writeFileSync(TWITCH_DATA_FILE, JSON.stringify(data, null, 2));
-    console.log(`✅ Saved Twitch configuration to ${TWITCH_DATA_FILE}`);
+    const serverDirs = readdirSync(SERVERS_DIR);
+    let loadedCount = 0;
+
+    serverDirs.forEach((guildId) => {
+      const configPath = getServerConfigPath(guildId);
+      if (existsSync(configPath)) {
+        try {
+          const data = JSON.parse(readFileSync(configPath, "utf-8"));
+          if (data.streamers) {
+            twitchStreamers.set(guildId, new Set(data.streamers));
+          }
+          if (data.channelId) {
+            twitchNotificationChannels.set(guildId, data.channelId);
+          }
+          loadedCount++;
+        } catch (error) {
+          console.error(
+            `❌ Error loading config for guild ${guildId}:`,
+            error.message
+          );
+        }
+      }
+    });
+
+    if (loadedCount > 0) {
+      console.log(
+        `✅ Loaded Twitch configuration for ${loadedCount} server(s)`
+      );
+    }
   } catch (error) {
-    console.error(`❌ Failed to save Twitch data: ${error.message}`);
+    console.error("❌ Error loading Twitch data:", error);
+  }
+}
+
+// Save Twitch data for a specific server
+function saveTwitchData(guildId) {
+  try {
+    ensureServerDirectory(guildId);
+
+    const configPath = getServerConfigPath(guildId);
+    const data = {
+      streamers: Array.from(twitchStreamers.get(guildId) || []),
+      channelId: twitchNotificationChannels.get(guildId) || null,
+    };
+
+    writeFileSync(configPath, JSON.stringify(data, null, 2));
+    console.log(`✅ Saved Twitch configuration for server ${guildId}`);
+  } catch (error) {
+    console.error(
+      `❌ Failed to save Twitch data for server ${guildId}: ${error.message}`
+    );
   }
 }
 
@@ -1935,7 +1994,7 @@ client.on("interactionCreate", async (interaction) => {
 
       streamers.add(streamerName);
       twitchNotificationChannels.set(guildId, notificationChannel.id);
-      saveTwitchData();
+      saveTwitchData(guildId);
 
       await interaction.reply({
         content:
@@ -1972,7 +2031,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       streamers.delete(streamerName);
-      saveTwitchData();
+      saveTwitchData(guildId);
 
       await interaction.reply({
         content: `✅ Stopped monitoring **${streamerName}**`,
@@ -2022,7 +2081,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       twitchNotificationChannels.set(guildId, channel.id);
-      saveTwitchData();
+      saveTwitchData(guildId);
 
       await interaction.reply({
         content: `✅ Twitch notifications will be sent to ${channel}`,
