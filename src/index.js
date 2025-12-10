@@ -220,6 +220,18 @@ function loadTrackingData() {
                 reactions: data.events?.reactions !== false,
                 channels: data.events?.channels !== false,
                 userUpdates: data.events?.userUpdates !== false,
+                channelUpdates: data.events?.channelUpdates !== false,
+                roles: data.events?.roles !== false,
+                guild: data.events?.guild !== false,
+                threads: data.events?.threads !== false,
+                scheduledEvents: data.events?.scheduledEvents !== false,
+                stickers: data.events?.stickers !== false,
+                webhooks: data.events?.webhooks !== false,
+                integrations: data.events?.integrations !== false,
+                invites: data.events?.invites !== false,
+                stageInstances: data.events?.stageInstances !== false,
+                moderationRules: data.events?.moderationRules !== false,
+                interactions: data.events?.interactions !== false,
               },
             });
 
@@ -268,6 +280,18 @@ function saveTrackingData(guildId) {
         reactions: true,
         channels: true,
         userUpdates: true,
+        channelUpdates: true,
+        roles: true,
+        guild: true,
+        threads: true,
+        scheduledEvents: true,
+        stickers: true,
+        webhooks: true,
+        integrations: true,
+        invites: true,
+        stageInstances: true,
+        moderationRules: true,
+        interactions: true,
       },
     };
 
@@ -2116,6 +2140,18 @@ client.on("interactionCreate", async (interaction) => {
         reactions: true,
         channels: true,
         userUpdates: true,
+        channelUpdates: true,
+        roles: true,
+        guild: true,
+        threads: true,
+        scheduledEvents: true,
+        stickers: true,
+        webhooks: true,
+        integrations: true,
+        invites: true,
+        stageInstances: true,
+        moderationRules: true,
+        interactions: true,
       };
 
       const ignoredChannelsStr =
@@ -2130,6 +2166,18 @@ client.on("interactionCreate", async (interaction) => {
         `Reactions: ${events.reactions ? "✅" : "❌"}`,
         `Channels: ${events.channels ? "✅" : "❌"}`,
         `User Updates: ${events.userUpdates ? "✅" : "❌"}`,
+        `Channel Updates: ${events.channelUpdates ? "✅" : "❌"}`,
+        `Roles: ${events.roles ? "✅" : "❌"}`,
+        `Guild: ${events.guild ? "✅" : "❌"}`,
+        `Threads: ${events.threads ? "✅" : "❌"}`,
+        `Scheduled Events: ${events.scheduledEvents ? "✅" : "❌"}`,
+        `Stickers: ${events.stickers ? "✅" : "❌"}`,
+        `Webhooks: ${events.webhooks ? "✅" : "❌"}`,
+        `Integrations: ${events.integrations ? "✅" : "❌"}`,
+        `Invites: ${events.invites ? "✅" : "❌"}`,
+        `Stage Instances: ${events.stageInstances ? "✅" : "❌"}`,
+        `Moderation Rules: ${events.moderationRules ? "✅" : "❌"}`,
+        `Interactions: ${events.interactions ? "✅" : "❌"}`,
       ].join("\n");
 
       await interaction.reply({
@@ -2217,6 +2265,18 @@ client.on("interactionCreate", async (interaction) => {
         { key: "reactions", option: "reactions" },
         { key: "channels", option: "channels" },
         { key: "userUpdates", option: "user-updates" },
+        { key: "channelUpdates", option: "channel-updates" },
+        { key: "roles", option: "roles" },
+        { key: "guild", option: "guild" },
+        { key: "threads", option: "threads" },
+        { key: "scheduledEvents", option: "scheduled-events" },
+        { key: "stickers", option: "stickers" },
+        { key: "webhooks", option: "webhooks" },
+        { key: "integrations", option: "integrations" },
+        { key: "invites", option: "invites" },
+        { key: "stageInstances", option: "stage-instances" },
+        { key: "moderationRules", option: "moderation-rules" },
+        { key: "interactions", option: "interactions" },
       ];
 
       const changes = [];
@@ -2402,6 +2462,44 @@ client.on("interactionCreate", async (interaction) => {
       );
     }
   }
+
+  // Track interactions (slash commands, buttons, select menus)
+  if (interaction.guild && interaction.user) {
+    let eventName = "Unknown Interaction";
+    let description = "";
+
+    if (interaction.isCommand()) {
+      eventName = "💬 Slash Command Used";
+      description = `**Command:** \`/${interaction.commandName}\``;
+    } else if (interaction.isButton()) {
+      eventName = "🔘 Button Clicked";
+      description = `**Button ID:** \`${interaction.customId}\``;
+    } else if (
+      interaction.isStringSelectMenu() ||
+      interaction.isUserSelectMenu() ||
+      interaction.isRoleSelectMenu() ||
+      interaction.isChannelSelectMenu()
+    ) {
+      eventName = "📋 Select Menu Used";
+      description = `**Menu Type:** ${interaction.customId}`;
+    }
+
+    if (eventName !== "Unknown Interaction") {
+      const embed = createTrackingEmbed(
+        eventName,
+        description,
+        interaction.user,
+        0x3498db
+      );
+      await logTrackingEvent(
+        interaction.guild.id,
+        null,
+        embed,
+        "interactions",
+        interaction.channelId
+      );
+    }
+  }
 });
 
 // Prefix command handler
@@ -2555,6 +2653,26 @@ client.on("messageCreate", async (message) => {
 // ============================================
 // GUILD ACTIVITY TRACKING
 // ============================================
+
+// Track sent messages
+client.on("messageCreate", async (message) => {
+  if (message.author.bot || !message.guild) return;
+  const embed = createTrackingEmbed(
+    "💬 Message Sent",
+    `**Channel:** <#${message.channel.id}>\n**Content:** ${
+      message.content?.substring(0, 200) || "(no content)"
+    }${message.content?.length > 200 ? "..." : ""}`,
+    message.author,
+    0x3498db
+  );
+  await logTrackingEvent(
+    message.guild.id,
+    null,
+    embed,
+    "message",
+    message.channel.id
+  );
+});
 
 // Track message deletions
 client.on("messageDelete", async (message) => {
@@ -2937,47 +3055,322 @@ client.on("channelUpdate", async (oldChannel, newChannel) => {
     changes.push(`Name: "${oldChannel.name}" → "${newChannel.name}"`);
   }
   if (oldChannel.topic !== newChannel.topic) {
-    changes.push(`Topic changed`);
+    changes.push(
+      `Topic: "${oldChannel.topic || "None"}" → "${newChannel.topic || "None"}"`
+    );
   }
 
   if (changes.length > 0) {
-    const msg = `✏️ [CHANNEL UPDATE] #${newChannel.name}\n   ${changes.join(
-      "\n   "
-    )}`;
-    await logTrackingEvent(newChannel.guild.id, msg);
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Channel Updated")
+      .setDescription(
+        `**Channel:** <#${newChannel.id}>\n${changes
+          .map((c) => `• ${c}`)
+          .join("\n")}`
+      )
+      .setColor(0xf39c12)
+      .setTimestamp();
+    await logTrackingEvent(
+      newChannel.guild.id,
+      null,
+      embed,
+      "channelUpdates",
+      newChannel.id
+    );
   }
 });
 
 // Track role creation
 client.on("roleCreate", async (role) => {
-  const msg = `➕ [ROLE CREATE] Role "${role.name}" created (Color: ${role.hexColor})`;
-  await logTrackingEvent(role.guild.id, msg);
+  if (!role.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➕ Role Created")
+    .setDescription(
+      `**Role:** <@&${role.id}>\n**Color:** ${
+        role.hexColor
+      }\n**Mentionable:** ${role.mentionable ? "Yes" : "No"}`
+    )
+    .setColor(0x2ecc71)
+    .setTimestamp();
+  await logTrackingEvent(role.guild.id, null, embed, "roles", null);
 });
 
 // Track role deletion
 client.on("roleDelete", async (role) => {
-  const msg = `➖ [ROLE DELETE] Role "${role.name}" deleted`;
-  await logTrackingEvent(role.guild.id, msg);
+  if (!role.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➖ Role Deleted")
+    .setDescription(`**Role:** ${role.name}\n**ID:** \`${role.id}\``)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(role.guild.id, null, embed, "roles", null);
 });
 
 // Track role updates
 client.on("roleUpdate", async (oldRole, newRole) => {
+  if (!newRole.guild) return;
   const changes = [];
+
   if (oldRole.name !== newRole.name) {
     changes.push(`Name: "${oldRole.name}" → "${newRole.name}"`);
   }
-  if (oldRole.hexColor !== newRole.hexColor) {
+  if (oldRole.color !== newRole.color) {
     changes.push(`Color: ${oldRole.hexColor} → ${newRole.hexColor}`);
   }
-  if (oldRole.permissions.bitfield !== newRole.permissions.bitfield) {
-    changes.push(`Permissions modified`);
+  if (oldRole.mentionable !== newRole.mentionable) {
+    changes.push(
+      `Mentionable: ${oldRole.mentionable ? "Yes" : "No"} → ${
+        newRole.mentionable ? "Yes" : "No"
+      }`
+    );
   }
 
   if (changes.length > 0) {
-    const msg = `✏️ [ROLE UPDATE] Role "${newRole.name}"\n   ${changes.join(
-      "\n   "
-    )}`;
-    await logTrackingEvent(newRole.guild.id, msg);
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Role Updated")
+      .setDescription(
+        `**Role:** <@&${newRole.id}>\n${changes
+          .map((c) => `• ${c}`)
+          .join("\n")}`
+      )
+      .setColor(0xf39c12)
+      .setTimestamp();
+    await logTrackingEvent(newRole.guild.id, null, embed, "roles", null);
+  }
+});
+
+// Track guild updates
+client.on("guildUpdate", async (oldGuild, newGuild) => {
+  const changes = [];
+
+  if (oldGuild.name !== newGuild.name) {
+    changes.push(`Name: "${oldGuild.name}" → "${newGuild.name}"`);
+  }
+  if (oldGuild.icon !== newGuild.icon) {
+    changes.push(`Icon changed`);
+  }
+  if (oldGuild.banner !== newGuild.banner) {
+    changes.push(`Banner changed`);
+  }
+
+  if (changes.length > 0) {
+    const embed = new EmbedBuilder()
+      .setTitle("🏛️ Guild Updated")
+      .setDescription(
+        `**Guild:** ${newGuild.name}\n${changes
+          .map((c) => `• ${c}`)
+          .join("\n")}`
+      )
+      .setColor(0x9b59b6)
+      .setTimestamp();
+    await logTrackingEvent(newGuild.id, null, embed, "guild", null);
+  }
+});
+
+// Track thread creation
+client.on("threadCreate", async (thread) => {
+  if (!thread.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➕ Thread Created")
+    .setDescription(
+      `**Thread:** <#${thread.id}>\n**Parent:** <#${thread.parentId}>\n**Type:** ${thread.type}`
+    )
+    .setColor(0x2ecc71)
+    .setTimestamp();
+  await logTrackingEvent(thread.guild.id, null, embed, "threads", thread.id);
+});
+
+// Track thread deletion
+client.on("threadDelete", async (thread) => {
+  if (!thread.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➖ Thread Deleted")
+    .setDescription(`**Thread:** ${thread.name}\n**ID:** \`${thread.id}\``)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(thread.guild.id, null, embed, "threads", null);
+});
+
+// Track scheduled events
+client.on("guildScheduledEventCreate", async (event) => {
+  const embed = new EmbedBuilder()
+    .setTitle("📅 Scheduled Event Created")
+    .setDescription(
+      `**Event:** ${event.name}\n**Time:** <t:${Math.floor(
+        event.scheduledStartTimestamp / 1000
+      )}:F>`
+    )
+    .setColor(0x3498db)
+    .setTimestamp();
+  await logTrackingEvent(event.guildId, null, embed, "scheduledEvents", null);
+});
+
+client.on("guildScheduledEventDelete", async (event) => {
+  const embed = new EmbedBuilder()
+    .setTitle("❌ Scheduled Event Deleted")
+    .setDescription(`**Event:** ${event.name}`)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(event.guildId, null, embed, "scheduledEvents", null);
+});
+
+client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
+  const changes = [];
+  if (oldEvent.name !== newEvent.name) {
+    changes.push(`Name: "${oldEvent.name}" → "${newEvent.name}"`);
+  }
+  if (oldEvent.description !== newEvent.description) {
+    changes.push(`Description changed`);
+  }
+
+  if (changes.length > 0) {
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Scheduled Event Updated")
+      .setDescription(
+        `**Event:** ${newEvent.name}\n${changes
+          .map((c) => `• ${c}`)
+          .join("\n")}`
+      )
+      .setColor(0xf39c12)
+      .setTimestamp();
+    await logTrackingEvent(
+      newEvent.guildId,
+      null,
+      embed,
+      "scheduledEvents",
+      null
+    );
+  }
+});
+
+// Track webhooks
+client.on("webhookUpdate", async (channel) => {
+  if (!channel.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("🪝 Webhook Updated")
+    .setDescription(`**Channel:** <#${channel.id}>`)
+    .setColor(0x3498db)
+    .setTimestamp();
+  await logTrackingEvent(channel.guild.id, null, embed, "webhooks", channel.id);
+});
+
+// Track stickers
+client.on("stickerCreate", async (sticker) => {
+  const embed = new EmbedBuilder()
+    .setTitle("➕ Sticker Created")
+    .setDescription(`**Sticker:** ${sticker.name}\n**ID:** \`${sticker.id}\``)
+    .setColor(0x2ecc71)
+    .setTimestamp();
+  await logTrackingEvent(sticker.guild.id, null, embed, "stickers", null);
+});
+
+client.on("stickerDelete", async (sticker) => {
+  const embed = new EmbedBuilder()
+    .setTitle("➖ Sticker Deleted")
+    .setDescription(`**Sticker:** ${sticker.name}`)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(sticker.guild.id, null, embed, "stickers", null);
+});
+
+client.on("stickerUpdate", async (oldSticker, newSticker) => {
+  const changes = [];
+  if (oldSticker.name !== newSticker.name) {
+    changes.push(`Name: "${oldSticker.name}" → "${newSticker.name}"`);
+  }
+  if (oldSticker.description !== newSticker.description) {
+    changes.push(`Description changed`);
+  }
+
+  if (changes.length > 0) {
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Sticker Updated")
+      .setDescription(
+        `**Sticker:** ${newSticker.name}\n${changes
+          .map((c) => `• ${c}`)
+          .join("\n")}`
+      )
+      .setColor(0xf39c12)
+      .setTimestamp();
+    await logTrackingEvent(newSticker.guild.id, null, embed, "stickers", null);
+  }
+});
+
+// Track invites
+client.on("inviteCreate", async (invite) => {
+  if (!invite.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➕ Invite Created")
+    .setDescription(
+      `**Channel:** <#${invite.channelId}>\n**Code:** \`${invite.code}\`\n**Creator:** ${invite.inviter}`
+    )
+    .setColor(0x2ecc71)
+    .setTimestamp();
+  await logTrackingEvent(
+    invite.guild.id,
+    null,
+    embed,
+    "invites",
+    invite.channelId
+  );
+});
+
+client.on("inviteDelete", async (invite) => {
+  if (!invite.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("➖ Invite Deleted")
+    .setDescription(`**Code:** \`${invite.code}\``)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(invite.guild.id, null, embed, "invites", null);
+});
+
+// Track stage instances
+client.on("stageInstanceCreate", async (stage) => {
+  if (!stage.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("🎤 Stage Instance Created")
+    .setDescription(`**Topic:** ${stage.topic}`)
+    .setColor(0x2ecc71)
+    .setTimestamp();
+  await logTrackingEvent(
+    stage.guild.id,
+    null,
+    embed,
+    "stageInstances",
+    stage.channelId
+  );
+});
+
+client.on("stageInstanceDelete", async (stage) => {
+  if (!stage.guild) return;
+  const embed = new EmbedBuilder()
+    .setTitle("🎤 Stage Instance Deleted")
+    .setDescription(`**Topic:** ${stage.topic}`)
+    .setColor(0xe74c3c)
+    .setTimestamp();
+  await logTrackingEvent(stage.guild.id, null, embed, "stageInstances", null);
+});
+
+client.on("stageInstanceUpdate", async (oldStage, newStage) => {
+  const changes = [];
+  if (oldStage.topic !== newStage.topic) {
+    changes.push(`Topic: "${oldStage.topic}" → "${newStage.topic}"`);
+  }
+
+  if (changes.length > 0) {
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Stage Instance Updated")
+      .setDescription(`${changes.map((c) => `• ${c}`).join("\n")}`)
+      .setColor(0xf39c12)
+      .setTimestamp();
+    await logTrackingEvent(
+      newStage.guild.id,
+      null,
+      embed,
+      "stageInstances",
+      null
+    );
   }
 });
 
@@ -2993,18 +3386,6 @@ client.on("guildBanAdd", async (ban) => {
 client.on("guildBanRemove", async (ban) => {
   const msg = `✅ [UNBAN] ${ban.user.tag} (${ban.user.id}) was unbanned`;
   await logTrackingEvent(ban.guild.id, msg);
-});
-
-// Track emoji creation
-client.on("emojiCreate", async (emoji) => {
-  const msg = `😀 [EMOJI CREATE] Emoji "${emoji.name}" created`;
-  await logTrackingEvent(emoji.guild.id, msg);
-});
-
-// Track emoji deletion
-client.on("emojiDelete", async (emoji) => {
-  const msg = `😢 [EMOJI DELETE] Emoji "${emoji.name}" deleted`;
-  await logTrackingEvent(emoji.guild.id, msg);
 });
 
 // Track when bot joins a server

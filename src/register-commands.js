@@ -440,6 +440,84 @@ const commands = [
             .setDescription("Track user profile updates (avatar, username)")
             .setRequired(false)
         )
+        .addBooleanOption((option) =>
+          option
+            .setName("channel-updates")
+            .setDescription("Track channel updates (name, topic, permissions)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("roles")
+            .setDescription("Track role events (create, delete, update)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("guild")
+            .setDescription("Track guild updates (name, icon, banner)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("threads")
+            .setDescription("Track thread events (create, delete, archive)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("scheduled-events")
+            .setDescription(
+              "Track scheduled events (create, delete, start, end)"
+            )
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("stickers")
+            .setDescription("Track sticker events (create, delete, update)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("webhooks")
+            .setDescription("Track webhook events (create, update, delete)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("integrations")
+            .setDescription("Track integration events (create, update, delete)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("invites")
+            .setDescription("Track invite events (create, delete)")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("stage-instances")
+            .setDescription(
+              "Track stage instance events (create, update, delete)"
+            )
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("moderation-rules")
+            .setDescription("Track auto moderation rule events")
+            .setRequired(false)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("interactions")
+            .setDescription(
+              "Track interaction events (slash commands, buttons, selects)"
+            )
+            .setRequired(false)
+        )
     )
     .toJSON(),
   // Twitch notification command
