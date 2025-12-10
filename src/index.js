@@ -480,6 +480,7 @@ client.once("clientReady", () => {
   const enableAutoExecution = process.env.ENABLE_AUTO_EXECUTION !== "false";
   if (enableAutoExecution) {
     setupAutoExecution();
+    console.log("✅ Auto-execution is enabled");
   } else {
     console.log("⏸️  Auto-execution is disabled (ENABLE_AUTO_EXECUTION=false)");
   }
