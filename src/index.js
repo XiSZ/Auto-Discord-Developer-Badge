@@ -778,6 +778,9 @@ client.once("clientReady", () => {
   console.log("🎯 Discord Active Developer Badge Auto-Maintenance Bot");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
+  // Increase max listeners to prevent memory leak warnings
+  client.setMaxListeners(20);
+
   // Load tracking configuration from disk
   loadTrackingData();
 

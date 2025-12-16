@@ -50,10 +50,9 @@ class TwitchAPI {
       this.cachedUserIds.set(username.toLowerCase(), user);
       return user;
     } catch (error) {
-      console.error(
-        `❌ Error fetching Twitch user ${username}:`,
-        error.message
-      );
+      const errorMsg =
+        error.response?.data?.error || error.message || String(error);
+      console.error(`❌ Error fetching Twitch user ${username}: ${errorMsg}`);
       return null;
     }
   }
@@ -87,9 +86,10 @@ class TwitchAPI {
         user_name: user.display_name,
       };
     } catch (error) {
+      const errorMsg =
+        error.response?.data?.error || error.message || String(error);
       console.error(
-        `❌ Error fetching stream info for ${username}:`,
-        error.message
+        `❌ Error fetching stream info for ${username}: ${errorMsg}`
       );
       return null;
     }
