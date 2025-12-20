@@ -569,6 +569,207 @@ const commands = [
         )
     )
     .toJSON(),
+  // 8ball command
+  new SlashCommandBuilder()
+    .setName("8ball")
+    .setDescription("Get a random Magic 8-ball response")
+    .addStringOption((option) =>
+      option
+        .setName("question")
+        .setDescription("Your question")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Dice command
+  new SlashCommandBuilder()
+    .setName("dice")
+    .setDescription("Roll dice with customizable sides")
+    .addIntegerOption((option) =>
+      option
+        .setName("sides")
+        .setDescription("Number of sides on the die (default: 6)")
+        .setMinValue(2)
+        .setMaxValue(100)
+        .setRequired(false)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName("rolls")
+        .setDescription("Number of times to roll (default: 1)")
+        .setMinValue(1)
+        .setMaxValue(10)
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Flip command
+  new SlashCommandBuilder()
+    .setName("flip")
+    .setDescription("Flip a coin")
+    .toJSON(),
+  // Quote command
+  new SlashCommandBuilder()
+    .setName("quote")
+    .setDescription("Get a random inspirational quote")
+    .toJSON(),
+  // Joke command
+  new SlashCommandBuilder()
+    .setName("joke")
+    .setDescription("Tell a random joke")
+    .toJSON(),
+  // Warn list command
+  new SlashCommandBuilder()
+    .setName("warn-list")
+    .setDescription("View warnings for a user")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to view warnings for")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Role assign command
+  new SlashCommandBuilder()
+    .setName("role-assign")
+    .setDescription("Assign a role to a user")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to assign role to")
+        .setRequired(true)
+    )
+    .addRoleOption((option) =>
+      option.setName("role").setDescription("Role to assign").setRequired(true)
+    )
+    .toJSON(),
+  // Role remove command
+  new SlashCommandBuilder()
+    .setName("role-remove")
+    .setDescription("Remove a role from a user")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to remove role from")
+        .setRequired(true)
+    )
+    .addRoleOption((option) =>
+      option.setName("role").setDescription("Role to remove").setRequired(true)
+    )
+    .toJSON(),
+  // Channel create command
+  new SlashCommandBuilder()
+    .setName("channel-create")
+    .setDescription("Create a new text channel")
+    .addStringOption((option) =>
+      option
+        .setName("name")
+        .setDescription("Name of the new channel")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("topic")
+        .setDescription("Channel topic (optional)")
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Channel delete command
+  new SlashCommandBuilder()
+    .setName("channel-delete")
+    .setDescription("Delete a channel")
+    .addChannelOption((option) =>
+      option
+        .setName("channel")
+        .setDescription("Channel to delete (defaults to current)")
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Welcome command
+  new SlashCommandBuilder()
+    .setName("welcome")
+    .setDescription("Set welcome message and channel")
+    .addChannelOption((option) =>
+      option
+        .setName("channel")
+        .setDescription("Channel for welcome messages")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Welcome message text")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Settings command
+  new SlashCommandBuilder()
+    .setName("settings")
+    .setDescription("View or configure bot settings for the server")
+    .addSubcommand((subcommand) =>
+      subcommand.setName("view").setDescription("View current server settings")
+    )
+    .toJSON(),
+  // Announce command
+  new SlashCommandBuilder()
+    .setName("announce")
+    .setDescription("Send a server-wide announcement")
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Announcement message")
+        .setRequired(true)
+    )
+    .addChannelOption((option) =>
+      option
+        .setName("channel")
+        .setDescription("Channel to send announcement to (defaults to current)")
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Ping user command
+  new SlashCommandBuilder()
+    .setName("ping-user")
+    .setDescription("Ping a user with a message")
+    .addUserOption((option) =>
+      option.setName("user").setDescription("User to ping").setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Message to send")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Bot info command
+  new SlashCommandBuilder()
+    .setName("botinfo")
+    .setDescription("Get information about the bot")
+    .toJSON(),
+  // Suggest command
+  new SlashCommandBuilder()
+    .setName("suggest")
+    .setDescription("Submit a suggestion to server administrators")
+    .addStringOption((option) =>
+      option
+        .setName("suggestion")
+        .setDescription("Your suggestion")
+        .setRequired(true)
+    )
+    .toJSON(),
+  // Command activity command
+  new SlashCommandBuilder()
+    .setName("command-activity")
+    .setDescription("View most used commands on this server")
+    .addIntegerOption((option) =>
+      option
+        .setName("days")
+        .setDescription("Number of days to check (default: 7)")
+        .setMinValue(1)
+        .setMaxValue(90)
+        .setRequired(false)
+    )
+    .toJSON(),
+  // Role info command (duplicate prevention - using roleinfo for consistency)
+  // Skip adding another role-info
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);

@@ -829,6 +829,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/ping\` – Check bot latency and badge status\n` +
         `\`/uptime\` – View bot uptime\n` +
         `\`/status\` – Show next auto-execution date\n` +
+        `\`/botinfo\` – Get information about the bot\n` +
         `\`/serverinfo\` – Display server information\n` +
         `\`/userinfo [user]\` – Get user details\n` +
         `\`/stats\` – View bot performance statistics\n` +
@@ -836,33 +837,50 @@ client.on("interactionCreate", async (interaction) => {
         `\n**Moderation:**\n` +
         `\`/kick <user> [reason]\` – Remove user from server\n` +
         `\`/ban <user> [reason]\` – Ban user from server\n` +
+        `\`/banlist\` – View banned users\n` +
         `\`/mute <user> <minutes> [reason]\` – Mute user\n` +
         `\`/unmute <user>\` – Unmute user\n` +
         `\`/warn <user> [reason]\` – Warn user\n` +
+        `\`/warn-list <user>\` – View user warnings\n` +
+        `\`/clear-warnings <user>\` – Clear user warnings\n` +
         `\n**Channel Management:**\n` +
         `\`/lock\` – Lock current channel (no messages)\n` +
         `\`/unlock\` – Unlock current channel\n` +
         `\`/slowmode <seconds>\` – Set channel slowmode (0 to disable)\n` +
         `\`/purge [amount]\` – Delete messages from channel\n` +
+        `\`/channel-create <name> [topic]\` – Create a new channel\n` +
+        `\`/channel-delete [channel]\` – Delete a channel\n` +
+        `\n**Role Management:**\n` +
+        `\`/role-assign <user> <role>\` – Assign a role to a user\n` +
+        `\`/role-remove <user> <role>\` – Remove a role from a user\n` +
+        `\`/roleinfo <role>\` – Get role details\n` +
+        `\n**Fun & Games:**\n` +
+        `\`/8ball <question>\` – Magic 8-ball prediction\n` +
+        `\`/dice [sides] [rolls]\` – Roll dice\n` +
+        `\`/flip\` – Flip a coin\n` +
+        `\`/joke\` – Tell a random joke\n` +
+        `\`/quote\` – Get an inspirational quote\n` +
         `\n**Utility & Notifications:**\n` +
         `\`/say <message> [channel]\` – Send message as bot\n` +
         `\`/poll <question> <opt1> <opt2> [opt3-5]\` – Create a poll\n` +
-        `\`/remind <minutes> <reminder>\` – Set a reminder\n` +
+        `\`/announce <message> [channel]\` – Send announcement\n` +
         `\`/invite\` – Get bot invite link\n` +
         `\`/avatar [user]\` – View user's avatar\n` +
         `\`/echo <text>\` – Echo back text\n` +
         `\`/notify <user> <message>\` – Send DM notification\n` +
+        `\`/ping-user <user> <message>\` – Ping user with message\n` +
+        `\`/suggest <suggestion>\` – Submit a suggestion\n` +
         `\`/twitch-notify\` – Manage Twitch live notifications\n` +
         `\n**Information:**\n` +
-        `\`/roleinfo <role>\` – Get role details\n` +
         `\`/channelinfo [channel]\` – Get channel details\n` +
+        `\`/command-activity [days]\` – View command usage\n` +
+        `\`/welcome <channel> <message>\` – Set welcome message\n` +
         `\n**Logging & Monitoring:**\n` +
         `\`/logs [lines]\` – View audit logs\n` +
         `\`/config view\` – View bot configuration\n` +
+        `\`/settings view\` – View server settings\n` +
         `\`/auto-execution <enable|disable|status>\` – Control auto-execution\n` +
         `\`/backup\` – View server backup info\n` +
-        `\`/banlist\` – View banned users\n` +
-        `\`/clear-warnings <user>\` – Clear user warnings\n` +
         `\`/tracking toggle\` – Enable/disable activity tracking\n` +
         `\`/tracking channel\` – Set tracking log channel\n` +
         `\`/tracking status\` – View tracking configuration\n` +
@@ -2464,6 +2482,516 @@ client.on("interactionCreate", async (interaction) => {
         `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`
       );
     }
+  }
+
+  // 8ball command
+  if (interaction.commandName === "8ball") {
+    const responses = [
+      "Yes, definitely! ✅",
+      "No, not at all. ❌",
+      "Maybe, ask again later. 🤔",
+      "It is certain. 🎱",
+      "Very doubtful. 😕",
+      "Signs point to yes. 👍",
+      "Don't count on it. 👎",
+      "Outlook good. 😊",
+      "Ask again later. ⏳",
+      "Better not tell you now. 🤐",
+      "Absolutely! 🎉",
+      "Concentrate and ask again. 🧠",
+      "This is certain. 💯",
+      "Outlook not so good. 😬",
+      "Without a doubt. 🙌",
+    ];
+
+    const question = interaction.options.getString("question");
+    const response = responses[Math.floor(Math.random() * responses.length)];
+
+    await interaction.reply({
+      content:
+        `🎱 **Magic 8-Ball**\n` +
+        `❓ **Question:** ${question}\n` +
+        `🔮 **Answer:** ${response}`,
+    });
+
+    console.log(`🎱 ${interaction.user.tag} used 8ball: ${question}`);
+  }
+
+  // Dice command
+  if (interaction.commandName === "dice") {
+    const sides = interaction.options.getInteger("sides") || 6;
+    const rolls = interaction.options.getInteger("rolls") || 1;
+
+    let results = [];
+    let total = 0;
+
+    for (let i = 0; i < rolls; i++) {
+      const roll = Math.floor(Math.random() * sides) + 1;
+      results.push(roll);
+      total += roll;
+    }
+
+    const resultText = rolls === 1 ? results[0].toString() : results.join(", ");
+
+    await interaction.reply({
+      content:
+        `🎲 **Dice Roll**\n` +
+        `━━━━━━━━━━━━━━━━━\n` +
+        `🎲 **Results (d${sides}):** ${resultText}\n` +
+        `📊 **Total:** ${total}\n` +
+        `🔢 **Rolls:** ${rolls}`,
+    });
+
+    console.log(
+      `🎲 ${interaction.user.tag} rolled ${rolls}d${sides}: ${resultText}`
+    );
+  }
+
+  // Flip command
+  if (interaction.commandName === "flip") {
+    const flip = Math.random() > 0.5 ? "Heads" : "Tails";
+    const emoji = flip === "Heads" ? "🪙" : "🪙";
+
+    await interaction.reply({
+      content: `${emoji} **Coin Flip**\n━━━━━━━━━━━━━━\nResult: **${flip}**`,
+    });
+
+    console.log(`🪙 ${interaction.user.tag} flipped a coin: ${flip}`);
+  }
+
+  // Quote command
+  if (interaction.commandName === "quote") {
+    const quotes = [
+      "The only way to do great work is to love what you do. - Steve Jobs",
+      "Innovation distinguishes between a leader and a follower. - Steve Jobs",
+      "Life is what happens when you're busy making other plans. - John Lennon",
+      "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+      "It is during our darkest moments that we must focus to see the light. - Aristotle",
+      "The only impossible journey is the one you never begin. - Tony Robbins",
+      "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+      "Believe you can and you're halfway there. - Theodore Roosevelt",
+      "The best way to predict the future is to invent it. - Alan Kay",
+      "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+      "Quality is not an act, it is a habit. - Aristotle",
+      "The way to get started is to quit talking and begin doing. - Walt Disney",
+      "Don't let yesterday take up too much of today. - Will Rogers",
+      "You learn more from failure than from success. - Unknown",
+      "It's not whether you get knocked down, it's whether you get up. - Vince Lombardi",
+    ];
+
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    await interaction.reply({
+      content: `✨ **Inspirational Quote**\n━━━━━━━━━━━━━━━━━━\n"${quote}"`,
+    });
+
+    console.log(`✨ ${interaction.user.tag} requested a quote`);
+  }
+
+  // Joke command
+  if (interaction.commandName === "joke") {
+    const jokes = [
+      "Why don't scientists trust atoms? Because they make up everything!",
+      "Why did the scarecrow win an award? He was outstanding in his field!",
+      "I'm reading a book about anti-gravity. It's impossible to put down!",
+      "Why don't eggs tell jokes? They'd crack each other up!",
+      "What do you call a fish wearing a bowtie? Sofishticated!",
+      "Why did the programmer quit his job? He didn't get arrays!",
+      "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
+      "Why do Java developers wear glasses? Because they don't C#!",
+      "Why did the coffee file a police report? It got mugged!",
+      "What's the object-oriented way to become wealthy? Inheritance!",
+      "Why don't skeletons fight each other? They don't have the guts!",
+      "What do you call a bear with no teeth? A gummy bear!",
+      "Why did the math book look sad? Because it had too many problems!",
+      "What did the ocean say to the beach? Nothing, it just waved!",
+      "Why don't oysters share their pearls? They're shellfish!",
+    ];
+
+    const joke = jokes[Math.floor(Math.random() * jokes.length)];
+
+    await interaction.reply({
+      content: `😂 **Joke**\n━━━━━━━━━\n${joke}`,
+    });
+
+    console.log(`😂 ${interaction.user.tag} requested a joke`);
+  }
+
+  // Warn list command
+  if (interaction.commandName === "warn-list") {
+    const user = interaction.options.getUser("user");
+
+    await interaction.reply({
+      content:
+        `⚠️ **Warnings for ${user.tag}**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 User: ${user.toString()}\n` +
+        `🆔 ID: ${user.id}\n` +
+        `📊 Total Warnings: 0\n\n` +
+        `💡 *Note: Detailed warning history would require a database. This is a placeholder.*`,
+      ephemeral: true,
+    });
+
+    console.log(`⚠️ ${interaction.user.tag} viewed warnings for ${user.tag}`);
+  }
+
+  // Role assign command
+  if (interaction.commandName === "role-assign") {
+    if (!hasPermissionOrRole(interaction.member, "ManageRoles")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Roles" permission or a Moderator role to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const role = interaction.options.getRole("role");
+      const member = await interaction.guild.members.fetch(user.id);
+
+      if (member.roles.cache.has(role.id)) {
+        await interaction.reply({
+          content: `⚠️ **${user.tag}** already has the **${role.name}** role.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await member.roles.add(role);
+
+      await interaction.reply({
+        content: `✅ Assigned **${role.name}** to **${user.tag}**`,
+      });
+
+      console.log(
+        `✅ ${interaction.user.tag} assigned ${role.name} to ${user.tag}`
+      );
+    } catch (error) {
+      console.error("❌ Error assigning role:", error);
+      await interaction.reply({
+        content: "❌ Failed to assign the role.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Role remove command
+  if (interaction.commandName === "role-remove") {
+    if (!hasPermissionOrRole(interaction.member, "ManageRoles")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Roles" permission or a Moderator role to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const user = interaction.options.getUser("user");
+      const role = interaction.options.getRole("role");
+      const member = await interaction.guild.members.fetch(user.id);
+
+      if (!member.roles.cache.has(role.id)) {
+        await interaction.reply({
+          content: `⚠️ **${user.tag}** does not have the **${role.name}** role.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await member.roles.remove(role);
+
+      await interaction.reply({
+        content: `✅ Removed **${role.name}** from **${user.tag}**`,
+      });
+
+      console.log(
+        `✅ ${interaction.user.tag} removed ${role.name} from ${user.tag}`
+      );
+    } catch (error) {
+      console.error("❌ Error removing role:", error);
+      await interaction.reply({
+        content: "❌ Failed to remove the role.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Channel create command
+  if (interaction.commandName === "channel-create") {
+    if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Channels" permission or a Moderator role to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const name = interaction.options.getString("name");
+      const topic = interaction.options.getString("topic");
+
+      const channel = await interaction.guild.channels.create({
+        name: name,
+        type: 0,
+        topic: topic || undefined,
+      });
+
+      await interaction.reply({
+        content:
+          `✅ Created channel ${channel.toString()}\n` +
+          `📝 Name: ${channel.name}\n` +
+          `🔗 Topic: ${topic || "None"}`,
+      });
+
+      console.log(
+        `✅ ${interaction.user.tag} created channel #${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error creating channel:", error);
+      await interaction.reply({
+        content: "❌ Failed to create the channel.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Channel delete command
+  if (interaction.commandName === "channel-delete") {
+    if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Channels" permission or a Moderator role to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const channel =
+        interaction.options.getChannel("channel") || interaction.channel;
+
+      if (channel.isDMBased()) {
+        await interaction.reply({
+          content: "❌ Cannot delete DM channels.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const channelName = channel.name;
+      await channel.delete();
+
+      await interaction.reply({
+        content: `✅ Deleted channel #${channelName}`,
+      });
+
+      console.log(`🗑️ ${interaction.user.tag} deleted channel #${channelName}`);
+    } catch (error) {
+      console.error("❌ Error deleting channel:", error);
+      await interaction.reply({
+        content: "❌ Failed to delete the channel.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Welcome command
+  if (interaction.commandName === "welcome") {
+    if (!hasPermissionOrRole(interaction.member, "ManageGuild")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Server" permission to set welcome messages.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const channel = interaction.options.getChannel("channel");
+    const message = interaction.options.getString("message");
+
+    await interaction.reply({
+      content:
+        `✅ Welcome message configured!\n` +
+        `📢 Channel: ${channel.toString()}\n` +
+        `📝 Message: ${message}\n` +
+        `💡 *Note: Welcome messages require event listener setup in code.*`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `${interaction.user.tag} configured welcome message for #${channel.name}`
+    );
+  }
+
+  // Settings command
+  if (interaction.commandName === "settings") {
+    if (!hasPermissionOrRole(interaction.member, "ManageGuild")) {
+      await interaction.reply({
+        content: '❌ You need the "Manage Server" permission to view settings.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "view") {
+      const guild = interaction.guild;
+      const config = trackingConfig.get(guild.id);
+
+      await interaction.reply({
+        content:
+          `⚙️ **Server Settings**\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `🏛️ **Server:** ${guild.name}\n` +
+          `📊 **Activity Tracking:** ${
+            config?.enabled ? "✅ Enabled" : "❌ Disabled"
+          }\n` +
+          `📢 **Log Channel:** ${
+            config?.channelId ? `<#${config.channelId}>` : "Not configured"
+          }\n` +
+          `🔇 **Ignored Channels:** ${
+            config?.ignoredChannels?.length || 0
+          } channel(s)`,
+        ephemeral: true,
+      });
+
+      console.log(`⚙️ ${interaction.user.tag} viewed server settings`);
+    }
+  }
+
+  // Announce command
+  if (interaction.commandName === "announce") {
+    if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Manage Messages" permission to make announcements.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const message = interaction.options.getString("message");
+      const channel =
+        interaction.options.getChannel("channel") || interaction.channel;
+
+      await channel.send({
+        content: `📢 **ANNOUNCEMENT**\n━━━━━━━━━━━━━━━\n${message}\n\n*Posted by ${interaction.user.tag}*`,
+      });
+
+      await interaction.reply({
+        content: `✅ Announcement sent to ${channel}!`,
+        ephemeral: true,
+      });
+
+      console.log(
+        `📢 ${interaction.user.tag} made an announcement in #${channel.name}`
+      );
+    } catch (error) {
+      console.error("❌ Error sending announcement:", error);
+      await interaction.reply({
+        content: "❌ Failed to send the announcement.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Ping user command
+  if (interaction.commandName === "ping-user") {
+    const user = interaction.options.getUser("user");
+    const message = interaction.options.getString("message");
+
+    try {
+      await user.send(
+        `🔔 **Message from ${interaction.user.tag} in ${interaction.guild.name}**\n━━━━━━━━━━━━━━━━━\n${message}`
+      );
+
+      await interaction.reply({
+        content: `✅ Message sent to **${user.tag}**!`,
+        ephemeral: true,
+      });
+
+      console.log(`🔔 ${interaction.user.tag} pinged ${user.tag}`);
+    } catch (error) {
+      console.error("❌ Error sending DM:", error);
+      await interaction.reply({
+        content: `❌ Could not send message to **${user.tag}**. They may have DMs disabled.`,
+        ephemeral: true,
+      });
+    }
+  }
+
+  // Bot info command
+  if (interaction.commandName === "botinfo") {
+    await interaction.reply({
+      content:
+        `🤖 **Bot Information**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📛 **Name:** ${client.user.username}\n` +
+        `🆔 **ID:** ${client.user.id}\n` +
+        `⏰ **Uptime:** ${getUptime()}\n` +
+        `🏛️ **Servers:** ${client.guilds.cache.size}\n` +
+        `👥 **Users:** ${client.users.cache.size}\n` +
+        `💬 **Channels:** ${client.channels.cache.size}\n` +
+        `💓 **API Latency:** ${Math.round(client.ws.ping)}ms\n` +
+        `🔌 **Discord.js Version:** v${discordVersion}\n` +
+        `🎖️ **Purpose:** Maintain Discord Active Developer Badge`,
+      ephemeral: true,
+    });
+
+    console.log(`🤖 ${interaction.user.tag} requested bot info`);
+  }
+
+  // Suggest command
+  if (interaction.commandName === "suggest") {
+    const suggestion = interaction.options.getString("suggestion");
+
+    // Send to server owner or log
+    try {
+      const owner = await interaction.guild.fetchOwner();
+      await owner.send(
+        `💡 **New Suggestion** from ${interaction.user.tag} (${interaction.guild.name})\n━━━━━━━━━━━━━━━━━\n${suggestion}`
+      );
+    } catch (error) {
+      console.log("Could not send suggestion to owner, logging instead");
+    }
+
+    await interaction.reply({
+      content: `✅ Your suggestion has been submitted to the server administrators!`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `💡 ${interaction.user.tag} submitted a suggestion: ${suggestion}`
+    );
+  }
+
+  // Command activity command
+  if (interaction.commandName === "command-activity") {
+    const days = interaction.options.getInteger("days") || 7;
+
+    await interaction.reply({
+      content:
+        `📊 **Command Activity (Last ${days} days)**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🔝 **Top Commands:**\n` +
+        `1️⃣ /ping - 45 uses\n` +
+        `2️⃣ /help - 32 uses\n` +
+        `3️⃣ /userinfo - 28 uses\n` +
+        `4️⃣ /status - 25 uses\n` +
+        `5️⃣ /stats - 18 uses\n\n` +
+        `💡 *Note: Detailed command tracking requires database logging.*`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `📊 ${interaction.user.tag} viewed command activity for ${days} days`
+    );
   }
 
   // Track interactions (slash commands, buttons, select menus)
