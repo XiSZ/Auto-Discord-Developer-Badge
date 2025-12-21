@@ -148,7 +148,7 @@ function loadTwitchData() {
           // Get server name if available
           const guild = client.guilds.cache.get(guildId);
           const serverName = guild?.name || guildId;
-          loadedServers.push(`${serverName} (${guildId})`);
+          loadedServers.push(`${guildId} - ${serverName}`);
           loadedCount++;
         } catch (error) {
           console.error(
@@ -160,11 +160,7 @@ function loadTwitchData() {
     });
 
     if (loadedCount > 0) {
-      console.log(
-        `✅ Loaded Twitch configuration for ${loadedCount} server(s):\n   ${loadedServers.join(
-          "\n   "
-        )}`
-      );
+      console.log(`✅ Loaded Twitch configuration for ${loadedCount} server(s)`);
     }
   } catch (error) {
     console.error("❌ Error loading Twitch data:", error);
@@ -221,6 +217,8 @@ function loadTranslationData() {
 
   try {
     const serverDirs = readdirSync(SERVERS_DIR);
+    const loadedServers = [];
+    let loadedCount = 0;
 
     for (const guildId of serverDirs) {
       const configPath = join(SERVERS_DIR, guildId, "translation-config.json");
@@ -233,7 +231,13 @@ function loadTranslationData() {
             displayMode: data.displayMode || "reply",
             targetLanguage: data.targetLanguage || "en",
           });
-          console.log(`✅ Loaded translation config for server ${guildId}`);
+
+          // Get server name if available
+          const guild = client.guilds.cache.get(guildId);
+          const serverName = guild?.name || guildId;
+          const joinDate = guild?.joinedAt?.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) || "Unknown";
+          loadedServers.push(`${guildId} - ${serverName} - ${joinDate}`);
+          loadedCount++;
         } catch (error) {
           console.error(
             `❌ Failed to parse translation config for server ${guildId}: ${error.message}`
@@ -242,9 +246,13 @@ function loadTranslationData() {
       }
     }
 
-    console.log(
-      `✅ Loaded translation configurations for ${translationConfig.size} server(s)`
-    );
+    if (loadedCount > 0) {
+      console.log(
+        `✅ Loaded translation configurations for ${loadedCount} server(s):\n   ${loadedServers.join(
+          "\n   "
+        )}`
+      );
+    }
   } catch (error) {
     console.error(`❌ Failed to load translation data: ${error.message}`);
   }
@@ -473,7 +481,8 @@ function loadTrackingData() {
             // Get server name if available
             const guild = client.guilds.cache.get(guildId);
             const serverName = guild?.name || guildId;
-            loadedServers.push(`${serverName} (${guildId})`);
+            const joinDate = guild?.joinedAt?.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) || "Unknown";
+            loadedServers.push(`${guildId} - ${serverName} - ${joinDate}`);
             loadedCount++;
           }
         } catch (error) {
@@ -486,11 +495,7 @@ function loadTrackingData() {
     });
 
     if (loadedCount > 0) {
-      console.log(
-        `✅ Loaded tracking configuration for ${loadedCount} server(s):\n   ${loadedServers.join(
-          "\n   "
-        )}`
-      );
+      console.log(`✅ Loaded tracking configuration for ${loadedCount} server(s)`);
     }
   } catch (error) {
     console.error("❌ Error loading tracking data:", error);
