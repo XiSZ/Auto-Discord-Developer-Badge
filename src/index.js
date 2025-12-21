@@ -17,6 +17,7 @@ import {
   readdirSync,
 } from "fs";
 import TwitchAPI from "./twitch-api.js";
+import emojiRegex from "emoji-regex";
 
 dotenv.config();
 
@@ -289,22 +290,45 @@ function getLanguageName(isoCode) {
 }
 
 // Helper: get a flag emoji for a given language ISO code
+function countryCodeToFlag(ccRaw) {
+  if (!ccRaw) return null;
+  const cc = ccRaw.toUpperCase();
+  if (cc.length !== 2 || cc < "A" || cc > "Z") return null;
+  const base = 0x1f1e6; // Regional Indicator Symbol Letter A
+  const first = base + (cc.charCodeAt(0) - 65);
+  const second = base + (cc.charCodeAt(1) - 65);
+  return String.fromCodePoint(first) + String.fromCodePoint(second);
+}
+
 function getLanguageFlag(isoCodeRaw) {
-  const iso = isoCodeRaw.toLowerCase();
+  const iso = (isoCodeRaw || "").toLowerCase();
   // Map common language codes to representative flags
   const map = {
+    // Global/popular
     en: "🇺🇸",
+    "en-us": "🇺🇸",
+    "en-gb": "🇬🇧",
+    "en-ca": "🇨🇦",
+    "en-au": "🇦🇺",
     es: "🇪🇸",
+    "es-es": "🇪🇸",
+    "es-mx": "🇲🇽",
+    "es-ar": "🇦🇷",
     fr: "🇫🇷",
+    "fr-ca": "🇨🇦",
     de: "🇩🇪",
     it: "🇮🇹",
     ja: "🇯🇵",
     ko: "🇰🇷",
     ru: "🇷🇺",
     pt: "🇵🇹",
+    "pt-pt": "🇵🇹",
     "pt-br": "🇧🇷",
+    zh: "🇨🇳",
     "zh-cn": "🇨🇳",
     "zh-tw": "🇹🇼",
+    "zh-hk": "🇭🇰",
+    "zh-sg": "🇸🇬",
     nl: "🇳🇱",
     sv: "🇸🇪",
     no: "🇳🇴",
@@ -313,7 +337,12 @@ function getLanguageFlag(isoCodeRaw) {
     pl: "🇵🇱",
     tr: "🇹🇷",
     ar: "🇸🇦",
-    hi: "🇮🇳",
+    "ar-eg": "🇪🇬",
+    "ar-sa": "🇸🇦",
+    fa: "🇮🇷",
+    "fa-af": "🇦🇫",
+    ur: "🇵🇰",
+    bn: "🇧🇩",
     he: "🇮🇱",
     cs: "🇨🇿",
     el: "🇬🇷",
@@ -322,11 +351,75 @@ function getLanguageFlag(isoCodeRaw) {
     uk: "🇺🇦",
     bg: "🇧🇬",
     sk: "🇸🇰",
+    hr: "🇭🇷",
+    sr: "🇷🇸",
+    bs: "🇧🇦",
+    sq: "🇦🇱",
+    mk: "🇲🇰",
+    sl: "🇸🇮",
+    et: "🇪🇪",
+    lv: "🇱🇻",
+    lt: "🇱🇹",
+    id: "🇮🇩",
+    ms: "🇲🇾",
+    th: "🇹🇭",
+    vi: "🇻🇳",
+    tl: "🇵🇭",
+    fil: "🇵🇭",
+    ka: "🇬🇪",
+    hy: "🇦🇲",
+    az: "🇦🇿",
+    kk: "🇰🇿",
+    uz: "🇺🇿",
+    tg: "🇹🇯",
+    tk: "🇹🇲",
+    ne: "🇳🇵",
+    si: "🇱🇰",
+    km: "🇰🇭",
+    lo: "🇱🇦",
+    my: "🇲🇲",
+    mn: "🇲🇳",
+    am: "🇪🇹",
+    sw: "🇰🇪",
+    zu: "🇿🇦",
+    xh: "🇿🇦",
+    yo: "🇳🇬",
+    ha: "🇳🇬",
+    ig: "🇳🇬",
+    so: "🇸🇴",
+    af: "🇿🇦",
+    ku: "🇮🇶",
+    "ku-tr": "🇹🇷",
+    "ku-ir": "🇮🇷",
   };
 
   // Normalize variants like zh-CN
   const normalized = iso.replace("_", "-");
-  return map[normalized] || map[iso] || "🌐";
+
+  // Prefer explicit mapping
+  if (map[normalized]) return map[normalized];
+  if (map[iso]) return map[iso];
+
+  // Try to derive from region (last segment after hyphen)
+  const parts = normalized.split("-");
+  const region = parts.length > 1 ? parts[parts.length - 1] : null;
+  const regionFlag = countryCodeToFlag(region);
+  if (regionFlag) return regionFlag;
+
+  return "🌐";
+}
+
+// Helper: strip custom Discord emotes and Unicode emojis from text
+function stripEmotes(text) {
+  if (!text) return text;
+  // Remove custom emojis like <:name:id> or <a:name:id>
+  const customEmojiRegex = /<a?:[A-Za-z0-9_~]{2,}:\d{17,}>/g;
+  const withoutCustom = text.replace(customEmojiRegex, "");
+  // Remove unicode emojis
+  const unicodeEmojiRegex = emojiRegex();
+  const withoutUnicode = withoutCustom.replace(unicodeEmojiRegex, "");
+  // Collapse extra whitespace
+  return withoutUnicode.replace(/[\s\u00A0]+/g, " ").trim();
 }
 
 // Get path to tracking config file
@@ -3425,7 +3518,8 @@ client.on("interactionCreate", async (interaction) => {
       const options = { to: toLang };
       if (fromLang) options.from = fromLang;
 
-      const result = await translate(text, options);
+      const cleaned = stripEmotes(text);
+      const result = await translate(cleaned || text, options);
 
       const sourceIso = result.from.language.iso;
       const sourceName = getLanguageName(sourceIso);
@@ -3670,7 +3764,9 @@ client.on("messageCreate", async (message) => {
 
     // Detect language and translate
     const targetLang = getTranslationTargetLanguage(guildId);
-    const result = await translate(message.content, { to: targetLang });
+    const cleaned = stripEmotes(message.content);
+    if (!cleaned) return;
+    const result = await translate(cleaned, { to: targetLang });
 
     // Only respond if source language is different from target
     if (result.from.language.iso !== targetLang) {
