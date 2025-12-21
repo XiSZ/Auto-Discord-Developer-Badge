@@ -113,15 +113,15 @@ export function logConfigurationStatus(
   loadedServers
 ) {
   if (loadedCount > 0) {
-    logger.log(
+    console.log(
       `✅ Loaded ${featureName} for ${loadedCount} server(s):\n   ${loadedServers.join(
         "\n   "
       )}`
     );
-    logger.success(`${featureName.split(" ")[0]} enabled`);
+    console.log(`✅ ${featureName.split(" ")[0]} enabled`);
   } else {
-    logger.warn(
-      `${featureName.split(" ")[0]} disabled (no servers configured)`
+    console.log(
+      `⚠️ ${featureName.split(" ")[0]} disabled (no servers configured)`
     );
   }
 }

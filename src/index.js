@@ -1107,7 +1107,6 @@ client.once("clientReady", () => {
       process.env.TWITCH_ACCESS_TOKEN
     );
     loadTwitchData();
-    console.log("✅ Twitch notifications enabled");
 
     // Start Twitch polling every 5 minutes (balances notifications with API rate limits)
     setInterval(checkTwitchStreamers, 300000);
