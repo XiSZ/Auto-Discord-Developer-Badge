@@ -432,6 +432,23 @@ function getTrackingConfigPath(guildId) {
   return join(SERVERS_DIR, guildId, "tracking-config.json");
 }
 
+// Helper: format server info as "ID - name - joinDate"
+function formatServerInfo(guildId) {
+  const guild = client.guilds.cache.get(guildId);
+  const serverName = guild?.name || guildId;
+  const joinDate =
+    guild?.joinedAt?.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }) || "Unknown";
+  return `${guildId} - ${serverName} - ${joinDate}`;
+}
+
 // Load tracking data from all server config files
 function loadTrackingData() {
   if (!fileOps.exists(SERVERS_DIR)) {
