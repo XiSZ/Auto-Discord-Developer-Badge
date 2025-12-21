@@ -265,6 +265,10 @@ The setup guide (`invite-bot.html`) is automatically generated from your `.env` 
   - Shows current translation settings (display mode, target language)
   - Lists all enabled channels
   - **Permissions Required**: Manage Server
+- `/translate-status` - View current translation settings
+  - Shows display mode and target language
+  - Lists all channels with auto-translation enabled
+  - **Permissions Required**: Manage Server
 
 **Translation Features:**
 

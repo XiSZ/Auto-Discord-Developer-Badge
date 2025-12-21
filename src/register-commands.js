@@ -914,6 +914,11 @@ const commands = [
       .setName("translate-list")
       .setDescription("List all channels with auto-translation enabled")
   ),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("translate-status")
+      .setDescription("View current translation settings and enabled channels")
+  ),
   makeUserInstallable(
     new SlashCommandBuilder()
       .setName("translate")

@@ -249,6 +249,86 @@ function loadTranslationData() {
   }
 }
 
+// Helper: ensure translation config exists for a guild
+function ensureTranslationConfig(guildId) {
+  if (!translationConfig.has(guildId)) {
+    translationConfig.set(guildId, {
+      channels: new Set(),
+      displayMode: "reply",
+      targetLanguage: "en",
+    });
+  }
+  return translationConfig.get(guildId);
+}
+
+// Helper: is translation enabled for a channel
+function isTranslationEnabledForChannel(guildId, channelId) {
+  const config = translationConfig.get(guildId);
+  return !!config && config.channels.has(channelId);
+}
+
+// Helper: get translation display mode
+function getTranslationDisplayMode(guildId) {
+  return translationConfig.get(guildId)?.displayMode || "reply";
+}
+
+// Helper: get translation target language
+function getTranslationTargetLanguage(guildId) {
+  return translationConfig.get(guildId)?.targetLanguage || "en";
+}
+
+// Helper: get human-readable language name from ISO code
+function getLanguageName(isoCode) {
+  try {
+    const dn = new Intl.DisplayNames(["en"], { type: "language" });
+    const name = dn.of(isoCode.toLowerCase());
+    return name || isoCode.toUpperCase();
+  } catch (_) {
+    return isoCode.toUpperCase();
+  }
+}
+
+// Helper: get a flag emoji for a given language ISO code
+function getLanguageFlag(isoCodeRaw) {
+  const iso = isoCodeRaw.toLowerCase();
+  // Map common language codes to representative flags
+  const map = {
+    en: "🇺🇸",
+    es: "🇪🇸",
+    fr: "🇫🇷",
+    de: "🇩🇪",
+    it: "🇮🇹",
+    ja: "🇯🇵",
+    ko: "🇰🇷",
+    ru: "🇷🇺",
+    pt: "🇵🇹",
+    "pt-br": "🇧🇷",
+    "zh-cn": "🇨🇳",
+    "zh-tw": "🇹🇼",
+    nl: "🇳🇱",
+    sv: "🇸🇪",
+    no: "🇳🇴",
+    da: "🇩🇰",
+    fi: "🇫🇮",
+    pl: "🇵🇱",
+    tr: "🇹🇷",
+    ar: "🇸🇦",
+    hi: "🇮🇳",
+    he: "🇮🇱",
+    cs: "🇨🇿",
+    el: "🇬🇷",
+    ro: "🇷🇴",
+    hu: "🇭🇺",
+    uk: "🇺🇦",
+    bg: "🇧🇬",
+    sk: "🇸🇰",
+  };
+
+  // Normalize variants like zh-CN
+  const normalized = iso.replace("_", "-");
+  return map[normalized] || map[iso] || "🌐";
+}
+
 // Get path to tracking config file
 function getTrackingConfigPath(guildId) {
   return join(SERVERS_DIR, guildId, "tracking-config.json");
@@ -997,6 +1077,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/translate-config <display-mode>\` – Configure translation\n` +
         `\`/translate-disable <channel>\` – Disable auto-translation\n` +
         `\`/translate-list\` – View enabled channels\n` +
+        `\`/translate-status\` – View translation settings\n` +
         `\n**Information:**\n` +
         `\`/channelinfo [channel]\` – Get channel details\n` +
         `\`/command-activity [days]\` – View command usage\n` +
@@ -3196,16 +3277,8 @@ client.on("interactionCreate", async (interaction) => {
       interaction.options.getString("target-language") || "en";
     const guildId = interaction.guild.id;
 
-    // Initialize config if doesn't exist
-    if (!translationConfig.has(guildId)) {
-      translationConfig.set(guildId, {
-        channels: new Set(),
-        displayMode: "reply",
-        targetLanguage: "en",
-      });
-    }
-
-    const config = translationConfig.get(guildId);
+    // Ensure config exists
+    const config = ensureTranslationConfig(guildId);
     config.channels.add(channel.id);
     if (targetLanguage) config.targetLanguage = targetLanguage;
 
@@ -3232,16 +3305,8 @@ client.on("interactionCreate", async (interaction) => {
     const defaultLanguage = interaction.options.getString("default-language");
     const guildId = interaction.guild.id;
 
-    // Initialize config if doesn't exist
-    if (!translationConfig.has(guildId)) {
-      translationConfig.set(guildId, {
-        channels: new Set(),
-        displayMode: "reply",
-        targetLanguage: "en",
-      });
-    }
-
-    const config = translationConfig.get(guildId);
+    // Ensure config exists
+    const config = ensureTranslationConfig(guildId);
     if (displayMode) config.displayMode = displayMode;
     if (defaultLanguage) config.targetLanguage = defaultLanguage;
 
@@ -3319,6 +3384,32 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
+  // Translate status command
+  if (interaction.commandName === "translate-status") {
+    if (requiresGuild(interaction, "translate-status")) return;
+
+    const guildId = interaction.guild.id;
+    const config = ensureTranslationConfig(guildId);
+
+    const channelList = Array.from(config.channels);
+    const channelsText =
+      channelList.length > 0
+        ? channelList.map((id) => `• <#${id}>`).join("\n")
+        : "(none)";
+
+    const targetLang = getTranslationTargetLanguage(guildId).toUpperCase();
+    const displayMode = getTranslationDisplayMode(guildId);
+
+    await interaction.reply({
+      content:
+        `🌐 **Translation Status**\n` +
+        `📤 Display mode: **${displayMode}**\n` +
+        `🎯 Target language: **${targetLang}**\n\n` +
+        `📋 **Enabled Channels:**\n${channelsText}`,
+      ephemeral: true,
+    });
+  }
+
   // Manual translate command
   if (interaction.commandName === "translate") {
     const text = interaction.options.getString("text");
@@ -3336,16 +3427,22 @@ client.on("interactionCreate", async (interaction) => {
 
       const result = await translate(text, options);
 
+      const sourceIso = result.from.language.iso;
+      const sourceName = getLanguageName(sourceIso);
+      const sourceFlag = getLanguageFlag(sourceIso);
+      const targetName = getLanguageName(toLang);
+      const targetFlag = getLanguageFlag(toLang);
+
       const embed = new EmbedBuilder()
         .setColor(0x4285f4)
         .setTitle("🌐 Translation")
         .addFields(
           {
-            name: `Original (${result.from.language.iso.toUpperCase()})`,
+            name: `Original (${sourceFlag} ${sourceName} — ${sourceIso.toUpperCase()})`,
             value: text.substring(0, 1024),
           },
           {
-            name: `Translation (${toLang.toUpperCase()})`,
+            name: `Translation (${targetFlag} ${targetName} — ${toLang.toUpperCase()})`,
             value: result.text.substring(0, 1024),
           }
         )
@@ -3565,22 +3662,23 @@ client.on("messageCreate", async (message) => {
   const channelId = message.channel.id;
 
   // Check if auto-translation is enabled for this channel
-  const config = translationConfig.get(guildId);
-  if (!config || !config.channels.has(channelId)) return;
+  if (!isTranslationEnabledForChannel(guildId, channelId)) return;
 
   try {
     // Dynamically import Google Translate
     const translate = (await import("@iamtraction/google-translate")).default;
 
     // Detect language and translate
-    const targetLang = config.targetLanguage || "en";
+    const targetLang = getTranslationTargetLanguage(guildId);
     const result = await translate(message.content, { to: targetLang });
 
     // Only respond if source language is different from target
     if (result.from.language.iso !== targetLang) {
-      const displayMode = config.displayMode || "reply";
+      const displayMode = getTranslationDisplayMode(guildId);
       const translatedText = result.text;
       const sourceLang = result.from.language.iso.toUpperCase();
+      const sourceName = getLanguageName(result.from.language.iso);
+      const sourceFlag = getLanguageFlag(result.from.language.iso);
 
       if (displayMode === "embed") {
         const embed = new EmbedBuilder()
@@ -3590,7 +3688,7 @@ client.on("messageCreate", async (message) => {
             iconURL: message.author.displayAvatarURL(),
           })
           .setDescription(
-            `**Original (${sourceLang}):**\n${message.content}\n\n**Translation:**\n${translatedText}`
+            `**Original (${sourceFlag} ${sourceName} — ${sourceLang}):**\n${message.content}\n\n**Translation:**\n${translatedText}`
           )
           .setFooter({
             text: `Translated by Google Translate • ${sourceLang} → ${targetLang.toUpperCase()}`,
@@ -3604,11 +3702,13 @@ client.on("messageCreate", async (message) => {
           name: `Translation (${sourceLang} → ${targetLang.toUpperCase()})`,
           autoArchiveDuration: 60,
         });
-        await thread.send(`🌐 **Translation:**\n${translatedText}`);
+        await thread.send(
+          `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLang}):**\n${translatedText}`
+        );
       } else {
         // Default: reply mode
         await message.reply(
-          `🌐 **Translation (${sourceLang} → ${targetLang.toUpperCase()}):**\n${translatedText}`
+          `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLang} → ${targetLang.toUpperCase()}):**\n${translatedText}`
         );
       }
     }
