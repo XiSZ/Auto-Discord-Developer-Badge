@@ -8,6 +8,8 @@ This bot automatically helps you maintain your Discord Active Developer Badge el
 - 📊 Auto-executes commands every 30 days to ensure active developer status
 - ⚡ Simple and easy setup process
 - 🔄 Automatic reconnection mechanism
+- 💬 Works in servers, DMs, and group DMs
+- 👤 **User App Support** - Install once, use anywhere (servers, DMs, group DMs)
 
 ## Why do you need this bot?
 
@@ -35,7 +37,20 @@ cd Auto-Discord-Developer-Badge
    - MESSAGE CONTENT INTENT
    - GUILD MESSAGES
 
-### 2. Invite Bot to Server
+### 2. Enable User App Installation (Optional but Recommended)
+
+To allow the bot to work in DMs and group DMs as a User App:
+
+1. In Developer Portal, go to "Installation" on the left sidebar
+2. Under "Installation Contexts", enable:
+   - ✅ **Guild Install** (for server installation)
+   - ✅ **User Install** (for DM and group DM usage)
+3. Set default install settings for both contexts
+4. Save changes
+
+### 3. Invite Bot to Server (or Install as User App)
+
+**Option A: Add to Server (Traditional)**
 
 1. In Developer Portal, select "OAuth2" > "URL Generator"
 2. Check the following permissions:
@@ -44,7 +59,16 @@ cd Auto-Discord-Developer-Badge
 3. Copy the generated URL and open it in your browser
 4. Select the server to add the bot to
 
-### 3. Setup Project
+**Option B: Install as User App (Recommended)**
+
+1. Use the same OAuth2 URL but select "Install to User" option when prompted
+2. This allows you to use the bot in:
+   - Any server where you have permission
+   - Direct messages with the bot
+   - Group DMs
+   - Private channels
+
+### 4. Setup Project
 
 ```bash
 # Install dependencies (this will automatically create .env and invite-bot.html files)
@@ -56,7 +80,7 @@ npm install
 - ✅ Create `.env` file from `.env.example` (if it doesn't exist)
 - ✅ Create `invite-bot.html` from `invite-bot.html.template` (if it doesn't exist)
 
-### 4. Configure Environment Variables
+### 5. Configure Environment Variables
 
 Edit the `.env` file and fill in the following information:
 
@@ -76,13 +100,13 @@ COMMAND_PREFIX=!
   - Can be any character or string (e.g., `.` or `>` or `$` or `cmd`)
   - Requires restarting the bot for changes to take effect
 
-### 5. Register Slash Commands
+### 6. Register Slash Commands
 
 ```bash
 npm run register
 ```
 
-### 6. Start the Bot
+### 7. Start the Bot
 
 ```bash
 npm start
@@ -97,7 +121,41 @@ After starting the bot, it will:
 3. ✅ Automatically connect to Discord
 4. ✅ Register the `/ping` command
 5. ✅ Auto-execute commands every 30 days to keep the application active
-6. ✅ You can also manually test by typing `/ping` in Discord
+6. ✅ You can also manually test by typing `/ping` in Discord or DMs
+
+### Using Commands in DMs and User Apps
+
+This bot supports Discord's **User App** feature, allowing you to use it in multiple contexts:
+
+- 🏢 **Servers** - Traditional bot usage in Discord servers
+- 💬 **Direct Messages** - Use commands in DMs with the bot
+- 👥 **Group DMs** - Use commands in group conversations
+- 🔒 **Private Channels** - Works in private channels too
+
+**How to Use as a User App:**
+
+1. Install the bot as a User App (see installation instructions above)
+2. The bot's commands will appear in:
+   - Any server where the bot is installed
+   - Your DMs with the bot
+   - Any group DM you're in
+3. Simply type `/` to see available commands in any context
+
+**DM-Compatible Commands (marked with 💬 in `/help`):**
+
+- All fun commands (`/8ball`, `/dice`, `/flip`, `/joke`, `/quote`)
+- Info commands (`/ping`, `/uptime`, `/status`, `/botinfo`, `/stats`, `/userinfo`)
+- Utility commands (`/avatar`, `/echo`, `/notify`, `/ping-user`, `/remind`, `/invite`)
+- Help command (`/help`)
+
+**Server-Only Commands:**
+
+- All moderation commands (kick, ban, mute, warn, etc.)
+- Channel/role management commands
+- Server configuration commands (tracking, settings, etc.)
+- Guild-specific features (serverinfo, logs, etc.)
+
+**Note**: When used as a User App in group DMs, server-only commands will show an error message indicating they require a server context.
 
 ### Dynamic Setup Guide
 

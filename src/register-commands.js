@@ -3,686 +3,748 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Helper function to add user-install contexts to commands
+function makeUserInstallable(command) {
+  const commandJSON = command.toJSON();
+  // Add integration types: 0 = Guild Install, 1 = User Install
+  commandJSON.integration_types = [0, 1];
+  // Add contexts: 0 = Guild, 1 = Bot DM, 2 = Group DM, 3 = Private Channel
+  commandJSON.contexts = [0, 1, 2];
+  return commandJSON;
+}
+
+// Helper function for guild-only commands
+function makeGuildOnly(command) {
+  const commandJSON = command.toJSON();
+  commandJSON.integration_types = [0]; // Guild install only
+  commandJSON.contexts = [0]; // Guild only
+  return commandJSON;
+}
+
 const commands = [
   // Ping command to check latency and maintain Active Developer status
-  new SlashCommandBuilder()
-    .setName("ping")
-    .setDescription("Check bot latency and maintain Active Developer status")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("ping")
+      .setDescription("Check bot latency and maintain Active Developer status")
+  ),
   // Uptime command to check bot uptime
-  new SlashCommandBuilder()
-    .setName("uptime")
-    .setDescription("Check how long the bot has been running")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("uptime")
+      .setDescription("Check how long the bot has been running")
+  ),
   // Status command - Show Active Developer Badge status
-  new SlashCommandBuilder()
-    .setName("status")
-    .setDescription(
-      "View next auto-execution date for your Active Developer badge"
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("status")
+      .setDescription(
+        "View next auto-execution date for your Active Developer badge"
+      )
+  ),
   // Auto-execution control
-  new SlashCommandBuilder()
-    .setName("auto-execution")
-    .setDescription("Enable, disable, or view auto-execution status")
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("enable")
-        .setDescription("Enable auto-execution for Active Developer upkeep")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("disable")
-        .setDescription("Disable auto-execution for Active Developer upkeep")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand.setName("status").setDescription("Show auto-execution state")
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("auto-execution")
+      .setDescription("Enable, disable, or view auto-execution status")
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("enable")
+          .setDescription("Enable auto-execution for Active Developer upkeep")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("disable")
+          .setDescription("Disable auto-execution for Active Developer upkeep")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand.setName("status").setDescription("Show auto-execution state")
+      )
+  ),
   // Help command
-  new SlashCommandBuilder()
-    .setName("help")
-    .setDescription("Display all available commands")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("help")
+      .setDescription("Display all available commands")
+  ),
   // Server info command
-  new SlashCommandBuilder()
-    .setName("serverinfo")
-    .setDescription("Display information about this server")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("serverinfo")
+      .setDescription("Display information about this server")
+  ),
   // User info command
-  new SlashCommandBuilder()
-    .setName("userinfo")
-    .setDescription("Get information about a user")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("The user to get info about (defaults to you)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("userinfo")
+      .setDescription("Get information about a user")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("The user to get info about (defaults to you)")
+          .setRequired(false)
+      )
+  ),
   // Stats command
-  new SlashCommandBuilder()
-    .setName("stats")
-    .setDescription("View bot performance statistics")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("stats")
+      .setDescription("View bot performance statistics")
+  ),
   // Purge command to delete messages in bulk
-  new SlashCommandBuilder()
-    .setName("purge")
-    .setDescription("Delete all messages in the channel")
-    .addIntegerOption((option) =>
-      option
-        .setName("amount")
-        .setDescription(
-          "Number of messages to delete (1-1000, default: all fetchable)"
-        )
-        .setMinValue(1)
-        .setMaxValue(1000)
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("purge")
+      .setDescription("Delete all messages in the channel")
+      .addIntegerOption((option) =>
+        option
+          .setName("amount")
+          .setDescription(
+            "Number of messages to delete (1-1000, default: all fetchable)"
+          )
+          .setMinValue(1)
+          .setMaxValue(1000)
+          .setRequired(false)
+      )
+  ),
   // Lock command
-  new SlashCommandBuilder()
-    .setName("lock")
-    .setDescription("Lock the current channel (prevent messages)")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("lock")
+      .setDescription("Lock the current channel (prevent messages)")
+  ),
   // Unlock command
-  new SlashCommandBuilder()
-    .setName("unlock")
-    .setDescription("Unlock the current channel")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("unlock")
+      .setDescription("Unlock the current channel")
+  ),
   // Slowmode command
-  new SlashCommandBuilder()
-    .setName("slowmode")
-    .setDescription("Set channel slowmode delay")
-    .addIntegerOption((option) =>
-      option
-        .setName("seconds")
-        .setDescription("Slowmode delay in seconds (0 to disable)")
-        .setMinValue(0)
-        .setMaxValue(21600)
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("slowmode")
+      .setDescription("Set channel slowmode delay")
+      .addIntegerOption((option) =>
+        option
+          .setName("seconds")
+          .setDescription("Slowmode delay in seconds (0 to disable)")
+          .setMinValue(0)
+          .setMaxValue(21600)
+          .setRequired(true)
+      )
+  ),
   // Kick command
-  new SlashCommandBuilder()
-    .setName("kick")
-    .setDescription("Kick a user from the server")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to kick").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reason")
-        .setDescription("Reason for kick")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("kick")
+      .setDescription("Kick a user from the server")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to kick").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("reason")
+          .setDescription("Reason for kick")
+          .setRequired(false)
+      )
+  ),
   // Ban command
-  new SlashCommandBuilder()
-    .setName("ban")
-    .setDescription("Ban a user from the server")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to ban").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reason")
-        .setDescription("Reason for ban")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("ban")
+      .setDescription("Ban a user from the server")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to ban").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("reason")
+          .setDescription("Reason for ban")
+          .setRequired(false)
+      )
+  ),
   // Mute command
-  new SlashCommandBuilder()
-    .setName("mute")
-    .setDescription("Mute a user for a specified duration")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to mute").setRequired(true)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName("minutes")
-        .setDescription("Duration in minutes (1-40320)")
-        .setMinValue(1)
-        .setMaxValue(40320)
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reason")
-        .setDescription("Reason for mute")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("mute")
+      .setDescription("Mute a user for a specified duration")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to mute").setRequired(true)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName("minutes")
+          .setDescription("Duration in minutes (1-40320)")
+          .setMinValue(1)
+          .setMaxValue(40320)
+          .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("reason")
+          .setDescription("Reason for mute")
+          .setRequired(false)
+      )
+  ),
   // Unmute command
-  new SlashCommandBuilder()
-    .setName("unmute")
-    .setDescription("Unmute a user")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to unmute").setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("unmute")
+      .setDescription("Unmute a user")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to unmute").setRequired(true)
+      )
+  ),
   // Warn command
-  new SlashCommandBuilder()
-    .setName("warn")
-    .setDescription("Warn a user")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to warn").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reason")
-        .setDescription("Reason for warning")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("warn")
+      .setDescription("Warn a user")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to warn").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("reason")
+          .setDescription("Reason for warning")
+          .setRequired(false)
+      )
+  ),
   // Say command
-  new SlashCommandBuilder()
-    .setName("say")
-    .setDescription("Send a message as the bot")
-    .addStringOption((option) =>
-      option
-        .setName("message")
-        .setDescription("Message to send")
-        .setRequired(true)
-    )
-    .addChannelOption((option) =>
-      option
-        .setName("channel")
-        .setDescription("Channel to send message to (defaults to current)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("say")
+      .setDescription("Send a message as the bot")
+      .addStringOption((option) =>
+        option
+          .setName("message")
+          .setDescription("Message to send")
+          .setRequired(true)
+      )
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Channel to send message to (defaults to current)")
+          .setRequired(false)
+      )
+  ),
   // Poll command
-  new SlashCommandBuilder()
-    .setName("poll")
-    .setDescription("Create a poll with options")
-    .addStringOption((option) =>
-      option
-        .setName("question")
-        .setDescription("Poll question")
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option.setName("option1").setDescription("First option").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("option2")
-        .setDescription("Second option")
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("option3")
-        .setDescription("Third option")
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("option4")
-        .setDescription("Fourth option")
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("option5")
-        .setDescription("Fifth option")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("poll")
+      .setDescription("Create a poll with options")
+      .addStringOption((option) =>
+        option
+          .setName("question")
+          .setDescription("Poll question")
+          .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option.setName("option1").setDescription("First option").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("option2")
+          .setDescription("Second option")
+          .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("option3")
+          .setDescription("Third option")
+          .setRequired(false)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("option4")
+          .setDescription("Fourth option")
+          .setRequired(false)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("option5")
+          .setDescription("Fifth option")
+          .setRequired(false)
+      )
+  ),
   // Remind command
-  new SlashCommandBuilder()
-    .setName("remind")
-    .setDescription("Set a reminder (DM sent after specified time)")
-    .addIntegerOption((option) =>
-      option
-        .setName("minutes")
-        .setDescription("Minutes until reminder (1-10080)")
-        .setMinValue(1)
-        .setMaxValue(10080)
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reminder")
-        .setDescription("What to remind you about")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("remind")
+      .setDescription("Set a reminder (DM sent after specified time)")
+      .addIntegerOption((option) =>
+        option
+          .setName("minutes")
+          .setDescription("Minutes until reminder (1-10080)")
+          .setMinValue(1)
+          .setMaxValue(10080)
+          .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("reminder")
+          .setDescription("What to remind you about")
+          .setRequired(true)
+      )
+  ),
   // Invite command
-  new SlashCommandBuilder()
-    .setName("invite")
-    .setDescription("Get the bot invite link")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("invite")
+      .setDescription("Get the bot invite link")
+  ),
   // Logs command
-  new SlashCommandBuilder()
-    .setName("logs")
-    .setDescription("View recent server audit logs")
-    .addIntegerOption((option) =>
-      option
-        .setName("lines")
-        .setDescription("Number of logs to show (1-50, default: 10)")
-        .setMinValue(1)
-        .setMaxValue(50)
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("logs")
+      .setDescription("View recent server audit logs")
+      .addIntegerOption((option) =>
+        option
+          .setName("lines")
+          .setDescription("Number of logs to show (1-50, default: 10)")
+          .setMinValue(1)
+          .setMaxValue(50)
+          .setRequired(false)
+      )
+  ),
   // Config command
-  new SlashCommandBuilder()
-    .setName("config")
-    .setDescription("Manage bot configuration")
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("view")
-        .setDescription("View current bot configuration")
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("config")
+      .setDescription("Manage bot configuration")
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("view")
+          .setDescription("View current bot configuration")
+      )
+  ),
   // Backup command
-  new SlashCommandBuilder()
-    .setName("backup")
-    .setDescription("View server backup information")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("backup")
+      .setDescription("View server backup information")
+  ),
   // Avatar command
-  new SlashCommandBuilder()
-    .setName("avatar")
-    .setDescription("View a user's avatar")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to view avatar (defaults to you)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("avatar")
+      .setDescription("View a user's avatar")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("User to view avatar (defaults to you)")
+          .setRequired(false)
+      )
+  ),
   // Notify command
-  new SlashCommandBuilder()
-    .setName("notify")
-    .setDescription("Send a DM notification to a user")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to notify").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("message")
-        .setDescription("Message to send")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("notify")
+      .setDescription("Send a DM notification to a user")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to notify").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("message")
+          .setDescription("Message to send")
+          .setRequired(true)
+      )
+  ),
   // Echo command
-  new SlashCommandBuilder()
-    .setName("echo")
-    .setDescription("Echo back text (fun command)")
-    .addStringOption((option) =>
-      option.setName("text").setDescription("Text to echo").setRequired(true)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("echo")
+      .setDescription("Echo back text (fun command)")
+      .addStringOption((option) =>
+        option.setName("text").setDescription("Text to echo").setRequired(true)
+      )
+  ),
   // Role info command
-  new SlashCommandBuilder()
-    .setName("roleinfo")
-    .setDescription("Get detailed information about a role")
-    .addRoleOption((option) =>
-      option
-        .setName("role")
-        .setDescription("Role to get info about")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("roleinfo")
+      .setDescription("Get detailed information about a role")
+      .addRoleOption((option) =>
+        option
+          .setName("role")
+          .setDescription("Role to get info about")
+          .setRequired(true)
+      )
+  ),
   // Channel info command
-  new SlashCommandBuilder()
-    .setName("channelinfo")
-    .setDescription("Get detailed information about a channel")
-    .addChannelOption((option) =>
-      option
-        .setName("channel")
-        .setDescription("Channel to get info about (defaults to current)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("channelinfo")
+      .setDescription("Get detailed information about a channel")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Channel to get info about (defaults to current)")
+          .setRequired(false)
+      )
+  ),
   // Uptime ranking command
-  new SlashCommandBuilder()
-    .setName("uptime-ranking")
-    .setDescription("View bot 30-day uptime ranking")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("uptime-ranking")
+      .setDescription("View bot 30-day uptime ranking")
+  ),
   // Ban list command
-  new SlashCommandBuilder()
-    .setName("banlist")
-    .setDescription("View list of banned users in the server")
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("banlist")
+      .setDescription("View list of banned users in the server")
+  ),
   // Clear warnings command
-  new SlashCommandBuilder()
-    .setName("clear-warnings")
-    .setDescription("Clear warnings for a user (admin only)")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to clear warnings for")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("clear-warnings")
+      .setDescription("Clear warnings for a user (admin only)")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("User to clear warnings for")
+          .setRequired(true)
+      )
+  ),
   // Tracking command
-  new SlashCommandBuilder()
-    .setName("tracking")
-    .setDescription("Configure guild activity tracking")
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("toggle")
-        .setDescription("Enable or disable activity tracking")
-        .addBooleanOption((option) =>
-          option
-            .setName("enabled")
-            .setDescription("Enable (true) or disable (false) tracking")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("channel")
-        .setDescription("Set the channel for tracking logs")
-        .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Channel to send tracking logs to")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("status")
-        .setDescription("View current tracking configuration")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("ignore-channel")
-        .setDescription("Add or remove a channel from tracking ignore list")
-        .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Channel to ignore")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("events")
-        .setDescription("Configure which event types to track")
-        .addBooleanOption((option) =>
-          option
-            .setName("messages")
-            .setDescription("Track message events (send, edit, delete)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("members")
-            .setDescription("Track member events (join, leave, role changes)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("voice")
-            .setDescription("Track voice channel events (join, leave, mute)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("reactions")
-            .setDescription("Track reaction events")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("channels")
-            .setDescription("Track channel create/delete events")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("user-updates")
-            .setDescription("Track user profile updates (avatar, username)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("channel-updates")
-            .setDescription("Track channel updates (name, topic, permissions)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("roles")
-            .setDescription("Track role events (create, delete, update)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("guild")
-            .setDescription("Track guild updates (name, icon, banner)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("threads")
-            .setDescription("Track thread events (create, delete, archive)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("scheduled-events")
-            .setDescription(
-              "Track scheduled events (create, delete, start, end)"
-            )
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("stickers")
-            .setDescription("Track sticker events (create, delete, update)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("webhooks")
-            .setDescription("Track webhook events (create, update, delete)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("integrations")
-            .setDescription("Track integration events (create, update, delete)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("invites")
-            .setDescription("Track invite events (create, delete)")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("stage-instances")
-            .setDescription(
-              "Track stage instance events (create, update, delete)"
-            )
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("moderation-rules")
-            .setDescription("Track auto moderation rule events")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("interactions")
-            .setDescription(
-              "Track interaction events (slash commands, buttons, selects)"
-            )
-            .setRequired(false)
-        )
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("tracking")
+      .setDescription("Configure guild activity tracking")
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("toggle")
+          .setDescription("Enable or disable activity tracking")
+          .addBooleanOption((option) =>
+            option
+              .setName("enabled")
+              .setDescription("Enable (true) or disable (false) tracking")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("channel")
+          .setDescription("Set the channel for tracking logs")
+          .addChannelOption((option) =>
+            option
+              .setName("channel")
+              .setDescription("Channel to send tracking logs to")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("status")
+          .setDescription("View current tracking configuration")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("ignore-channel")
+          .setDescription("Add or remove a channel from tracking ignore list")
+          .addChannelOption((option) =>
+            option
+              .setName("channel")
+              .setDescription("Channel to ignore")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("events")
+          .setDescription("Configure which event types to track")
+          .addBooleanOption((option) =>
+            option
+              .setName("messages")
+              .setDescription("Track message events (send, edit, delete)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("members")
+              .setDescription("Track member events (join, leave, role changes)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("voice")
+              .setDescription("Track voice channel events (join, leave, mute)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("reactions")
+              .setDescription("Track reaction events")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("channels")
+              .setDescription("Track channel create/delete events")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("user-updates")
+              .setDescription("Track user profile updates (avatar, username)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("channel-updates")
+              .setDescription("Track channel updates (name, topic, permissions)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("roles")
+              .setDescription("Track role events (create, delete, update)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("guild")
+              .setDescription("Track guild updates (name, icon, banner)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("threads")
+              .setDescription("Track thread events (create, delete, archive)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("scheduled-events")
+              .setDescription(
+                "Track scheduled events (create, delete, start, end)"
+              )
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("stickers")
+              .setDescription("Track sticker events (create, delete, update)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("webhooks")
+              .setDescription("Track webhook events (create, update, delete)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("integrations")
+              .setDescription("Track integration events (create, update, delete)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("invites")
+              .setDescription("Track invite events (create, delete)")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("stage-instances")
+              .setDescription(
+                "Track stage instance events (create, update, delete)"
+              )
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("moderation-rules")
+              .setDescription("Track auto moderation rule events")
+              .setRequired(false)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("interactions")
+              .setDescription(
+                "Track interaction events (slash commands, buttons, selects)"
+              )
+              .setRequired(false)
+          )
+      )
+  ),
   // Twitch notification command
-  new SlashCommandBuilder()
-    .setName("twitch-notify")
-    .setDescription("Manage Twitch streamer notifications for your server")
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("add")
-        .setDescription("Add a Twitch streamer to monitor for this server")
-        .addStringOption((option) =>
-          option
-            .setName("streamer")
-            .setDescription("Twitch streamer username to monitor")
-            .setRequired(true)
-        )
-        .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Discord channel to send notifications to")
-            .setRequired(false)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("remove")
-        .setDescription("Stop monitoring a Twitch streamer")
-        .addStringOption((option) =>
-          option
-            .setName("streamer")
-            .setDescription("Twitch streamer username to stop monitoring")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("list")
-        .setDescription("List all monitored streamers for this server")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("channel")
-        .setDescription("Set default notification channel for this server")
-        .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Discord channel for Twitch notifications")
-            .setRequired(true)
-        )
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("twitch-notify")
+      .setDescription("Manage Twitch streamer notifications for your server")
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("add")
+          .setDescription("Add a Twitch streamer to monitor for this server")
+          .addStringOption((option) =>
+            option
+              .setName("streamer")
+              .setDescription("Twitch streamer username to monitor")
+              .setRequired(true)
+          )
+          .addChannelOption((option) =>
+            option
+              .setName("channel")
+              .setDescription("Discord channel to send notifications to")
+              .setRequired(false)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("remove")
+          .setDescription("Stop monitoring a Twitch streamer")
+          .addStringOption((option) =>
+            option
+              .setName("streamer")
+              .setDescription("Twitch streamer username to stop monitoring")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("list")
+          .setDescription("List all monitored streamers for this server")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("channel")
+          .setDescription("Set default notification channel for this server")
+          .addChannelOption((option) =>
+            option
+              .setName("channel")
+              .setDescription("Discord channel for Twitch notifications")
+              .setRequired(true)
+          )
+      )
+  ),
   // 8ball command
-  new SlashCommandBuilder()
-    .setName("8ball")
-    .setDescription("Get a random Magic 8-ball response")
-    .addStringOption((option) =>
-      option
-        .setName("question")
-        .setDescription("Your question")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("8ball")
+      .setDescription("Get a random Magic 8-ball response")
+      .addStringOption((option) =>
+        option
+          .setName("question")
+          .setDescription("Your question")
+          .setRequired(true)
+      )
+  ),
   // Dice command
-  new SlashCommandBuilder()
-    .setName("dice")
-    .setDescription("Roll dice with customizable sides")
-    .addIntegerOption((option) =>
-      option
-        .setName("sides")
-        .setDescription("Number of sides on the die (default: 6)")
-        .setMinValue(2)
-        .setMaxValue(100)
-        .setRequired(false)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName("rolls")
-        .setDescription("Number of times to roll (default: 1)")
-        .setMinValue(1)
-        .setMaxValue(10)
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("dice")
+      .setDescription("Roll dice with customizable sides")
+      .addIntegerOption((option) =>
+        option
+          .setName("sides")
+          .setDescription("Number of sides on the die (default: 6)")
+          .setMinValue(2)
+          .setMaxValue(100)
+          .setRequired(false)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName("rolls")
+          .setDescription("Number of times to roll (default: 1)")
+          .setMinValue(1)
+          .setMaxValue(10)
+          .setRequired(false)
+      )
+  ),
   // Flip command
-  new SlashCommandBuilder()
-    .setName("flip")
-    .setDescription("Flip a coin")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("flip")
+      .setDescription("Flip a coin")
+  ),
   // Quote command
-  new SlashCommandBuilder()
-    .setName("quote")
-    .setDescription("Get a random inspirational quote")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("quote")
+      .setDescription("Get a random inspirational quote")
+  ),
   // Joke command
-  new SlashCommandBuilder()
-    .setName("joke")
-    .setDescription("Tell a random joke")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("joke")
+      .setDescription("Tell a random joke")
+  ),
   // Warn list command
-  new SlashCommandBuilder()
-    .setName("warn-list")
-    .setDescription("View warnings for a user")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to view warnings for")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("warn-list")
+      .setDescription("View warnings for a user")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("User to view warnings for")
+          .setRequired(true)
+      )
+  ),
   // Role assign command
-  new SlashCommandBuilder()
-    .setName("role-assign")
-    .setDescription("Assign a role to a user")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to assign role to")
-        .setRequired(true)
-    )
-    .addRoleOption((option) =>
-      option.setName("role").setDescription("Role to assign").setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("role-assign")
+      .setDescription("Assign a role to a user")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("User to assign role to")
+          .setRequired(true)
+      )
+      .addRoleOption((option) =>
+        option.setName("role").setDescription("Role to assign").setRequired(true)
+      )
+  ),
   // Role remove command
-  new SlashCommandBuilder()
-    .setName("role-remove")
-    .setDescription("Remove a role from a user")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to remove role from")
-        .setRequired(true)
-    )
-    .addRoleOption((option) =>
-      option.setName("role").setDescription("Role to remove").setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("role-remove")
+      .setDescription("Remove a role from a user")
+      .addUserOption((option) =>
+        option
+          .setName("user")
+          .setDescription("User to remove role from")
+          .setRequired(true)
+      )
+      .addRoleOption((option) =>
+        option.setName("role").setDescription("Role to remove").setRequired(true)
+      )
+  ),
   // Channel create command
-  new SlashCommandBuilder()
-    .setName("channel-create")
-    .setDescription("Create a new text channel")
-    .addStringOption((option) =>
-      option
-        .setName("name")
-        .setDescription("Name of the new channel")
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("topic")
-        .setDescription("Channel topic (optional)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("channel-create")
+      .setDescription("Create a new text channel")
+      .addStringOption((option) =>
+        option
+          .setName("name")
+          .setDescription("Name of the new channel")
+          .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("topic")
+          .setDescription("Channel topic (optional)")
+          .setRequired(false)
+      )
+  ),
   // Channel delete command
-  new SlashCommandBuilder()
-    .setName("channel-delete")
-    .setDescription("Delete a channel")
-    .addChannelOption((option) =>
-      option
-        .setName("channel")
-        .setDescription("Channel to delete (defaults to current)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("channel-delete")
+      .setDescription("Delete a channel")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Channel to delete (defaults to current)")
+          .setRequired(false)
+      )
+  ),
   // Welcome command
   new SlashCommandBuilder()
     .setName("welcome")
@@ -699,75 +761,81 @@ const commands = [
         .setDescription("Welcome message text")
         .setRequired(true)
     )
-    .toJSON(),
+  ),
   // Settings command
-  new SlashCommandBuilder()
-    .setName("settings")
-    .setDescription("View or configure bot settings for the server")
-    .addSubcommand((subcommand) =>
-      subcommand.setName("view").setDescription("View current server settings")
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("settings")
+      .setDescription("View or configure bot settings for the server")
+      .addSubcommand((subcommand) =>
+        subcommand.setName("view").setDescription("View current server settings")
+      )
+  ),
   // Announce command
-  new SlashCommandBuilder()
-    .setName("announce")
-    .setDescription("Send a server-wide announcement")
-    .addStringOption((option) =>
-      option
-        .setName("message")
-        .setDescription("Announcement message")
-        .setRequired(true)
-    )
-    .addChannelOption((option) =>
-      option
-        .setName("channel")
-        .setDescription("Channel to send announcement to (defaults to current)")
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("announce")
+      .setDescription("Send a server-wide announcement")
+      .addStringOption((option) =>
+        option
+          .setName("message")
+          .setDescription("Announcement message")
+          .setRequired(true)
+      )
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Channel to send announcement to (defaults to current)")
+          .setRequired(false)
+      )
+  ),
   // Ping user command
-  new SlashCommandBuilder()
-    .setName("ping-user")
-    .setDescription("Ping a user with a message")
-    .addUserOption((option) =>
-      option.setName("user").setDescription("User to ping").setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("message")
-        .setDescription("Message to send")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("ping-user")
+      .setDescription("Ping a user with a message")
+      .addUserOption((option) =>
+        option.setName("user").setDescription("User to ping").setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName("message")
+          .setDescription("Message to send")
+          .setRequired(true)
+      )
+  ),
   // Bot info command
-  new SlashCommandBuilder()
-    .setName("botinfo")
-    .setDescription("Get information about the bot")
-    .toJSON(),
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("botinfo")
+      .setDescription("Get information about the bot")
+  ),
   // Suggest command
-  new SlashCommandBuilder()
-    .setName("suggest")
-    .setDescription("Submit a suggestion to server administrators")
-    .addStringOption((option) =>
-      option
-        .setName("suggestion")
-        .setDescription("Your suggestion")
-        .setRequired(true)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("suggest")
+      .setDescription("Submit a suggestion to server administrators")
+      .addStringOption((option) =>
+        option
+          .setName("suggestion")
+          .setDescription("Your suggestion")
+          .setRequired(true)
+      )
+  ),
   // Command activity command
-  new SlashCommandBuilder()
-    .setName("command-activity")
-    .setDescription("View most used commands on this server")
-    .addIntegerOption((option) =>
-      option
-        .setName("days")
-        .setDescription("Number of days to check (default: 7)")
-        .setMinValue(1)
-        .setMaxValue(90)
-        .setRequired(false)
-    )
-    .toJSON(),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("command-activity")
+      .setDescription("View most used commands on this server")
+      .addIntegerOption((option) =>
+        option
+          .setName("days")
+          .setDescription("Number of days to check (default: 7)")
+          .setMinValue(1)
+          .setMaxValue(90)
+          .setRequired(false)
+      )
+  ),
   // Role info command (duplicate prevention - using roleinfo for consistency)
   // Skip adding another role-info
 ];

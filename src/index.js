@@ -770,6 +770,55 @@ async function errorReply(interaction, content) {
   });
 }
 
+// Helper function to check if interaction is in DM
+function isDMInteraction(interaction) {
+  return !interaction.guild;
+}
+
+// Helper function to check if command requires guild context
+function requiresGuild(interaction, commandName) {
+  const guildOnlyCommands = [
+    "serverinfo",
+    "kick",
+    "ban",
+    "mute",
+    "unmute",
+    "warn",
+    "lock",
+    "unlock",
+    "slowmode",
+    "purge",
+    "logs",
+    "banlist",
+    "clear-warnings",
+    "tracking",
+    "roleinfo",
+    "channelinfo",
+    "role-assign",
+    "role-remove",
+    "channel-create",
+    "channel-delete",
+    "welcome",
+    "settings",
+    "announce",
+    "twitch-notify",
+    "config",
+    "backup",
+    "uptime-ranking",
+    "warn-list",
+    "suggest",
+  ];
+
+  if (guildOnlyCommands.includes(commandName) && isDMInteraction(interaction)) {
+    interaction.reply({
+      content: "❌ This command can only be used in a server, not in DMs.",
+      ephemeral: true,
+    });
+    return true;
+  }
+  return false;
+}
+
 client.once("clientReady", () => {
   console.log("✅ Bot is online!");
   console.log(`🤖 Logged in as: ${client.user.tag}`);
@@ -821,18 +870,23 @@ client.on("interactionCreate", async (interaction) => {
 
   // Help command
   if (interaction.commandName === "help") {
+    const isDM = isDMInteraction(interaction);
+    const dmNote = isDM
+      ? "\n\n💡 **You're in a DM!** Only commands marked with 💬 work here."
+      : "";
+
     await interaction.reply({
       content:
-        `📖 **Available Commands**\n` +
+        `📖 **Available Commands**${dmNote}\n` +
         `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
         `**Badge & Info:**\n` +
-        `\`/ping\` – Check bot latency and badge status\n` +
-        `\`/uptime\` – View bot uptime\n` +
-        `\`/status\` – Show next auto-execution date\n` +
-        `\`/botinfo\` – Get information about the bot\n` +
+        `\`/ping\` 💬 – Check bot latency and badge status\n` +
+        `\`/uptime\` 💬 – View bot uptime\n` +
+        `\`/status\` 💬 – Show next auto-execution date\n` +
+        `\`/botinfo\` 💬 – Get information about the bot\n` +
         `\`/serverinfo\` – Display server information\n` +
-        `\`/userinfo [user]\` – Get user details\n` +
-        `\`/stats\` – View bot performance statistics\n` +
+        `\`/userinfo [user]\` 💬 – Get user details\n` +
+        `\`/stats\` 💬 – View bot performance statistics\n` +
         `\`/uptime-ranking\` – View bot uptime percentage\n` +
         `\n**Moderation:**\n` +
         `\`/kick <user> [reason]\` – Remove user from server\n` +
@@ -855,20 +909,21 @@ client.on("interactionCreate", async (interaction) => {
         `\`/role-remove <user> <role>\` – Remove a role from a user\n` +
         `\`/roleinfo <role>\` – Get role details\n` +
         `\n**Fun & Games:**\n` +
-        `\`/8ball <question>\` – Magic 8-ball prediction\n` +
-        `\`/dice [sides] [rolls]\` – Roll dice\n` +
-        `\`/flip\` – Flip a coin\n` +
-        `\`/joke\` – Tell a random joke\n` +
-        `\`/quote\` – Get an inspirational quote\n` +
+        `\`/8ball <question>\` 💬 – Magic 8-ball prediction\n` +
+        `\`/dice [sides] [rolls]\` 💬 – Roll dice\n` +
+        `\`/flip\` 💬 – Flip a coin\n` +
+        `\`/joke\` 💬 – Tell a random joke\n` +
+        `\`/quote\` 💬 – Get an inspirational quote\n` +
         `\n**Utility & Notifications:**\n` +
         `\`/say <message> [channel]\` – Send message as bot\n` +
         `\`/poll <question> <opt1> <opt2> [opt3-5]\` – Create a poll\n` +
         `\`/announce <message> [channel]\` – Send announcement\n` +
-        `\`/invite\` – Get bot invite link\n` +
-        `\`/avatar [user]\` – View user's avatar\n` +
-        `\`/echo <text>\` – Echo back text\n` +
-        `\`/notify <user> <message>\` – Send DM notification\n` +
-        `\`/ping-user <user> <message>\` – Ping user with message\n` +
+        `\`/invite\` 💬 – Get bot invite link\n` +
+        `\`/avatar [user]\` 💬 – View user's avatar\n` +
+        `\`/echo <text>\` 💬 – Echo back text\n` +
+        `\`/notify <user> <message>\` 💬 – Send DM notification\n` +
+        `\`/ping-user <user> <message>\` 💬 – Ping user with message\n` +
+        `\`/remind <minutes> <reminder>\` 💬 – Set a reminder\n` +
         `\`/suggest <suggestion>\` – Submit a suggestion\n` +
         `\`/twitch-notify\` – Manage Twitch live notifications\n` +
         `\n**Information:**\n` +
@@ -884,10 +939,12 @@ client.on("interactionCreate", async (interaction) => {
         `\`/tracking toggle\` – Enable/disable activity tracking\n` +
         `\`/tracking channel\` – Set tracking log channel\n` +
         `\`/tracking status\` – View tracking configuration\n` +
-        `\`/help\` – Show this message`,
+        `\`/help\` 💬 – Show this message`,
       ephemeral: true,
     });
-    console.log(`✅ ${interaction.user.tag} executed help command`);
+    console.log(
+      `✅ ${interaction.user.tag} executed help command${isDM ? " (DM)" : ""}`
+    );
   }
 
   if (interaction.commandName === "ping") {
@@ -941,6 +998,8 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (interaction.commandName === "purge") {
+    if (requiresGuild(interaction, "purge")) return;
+
     // Check if user has permission to manage messages or is admin/mod
     if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
       await interaction.reply({
@@ -1137,6 +1196,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Server info command
   if (interaction.commandName === "serverinfo") {
+    if (requiresGuild(interaction, "serverinfo")) return;
+
     const guild = interaction.guild;
     const owner = await guild.fetchOwner();
     const memberCount = guild.memberCount;
@@ -1169,6 +1230,27 @@ client.on("interactionCreate", async (interaction) => {
   // User info command
   if (interaction.commandName === "userinfo") {
     const user = interaction.options.getUser("user") || interaction.user;
+
+    // If in DM, show limited user info
+    if (isDMInteraction(interaction)) {
+      const createdAt = Math.floor(user.createdTimestamp / 1000);
+      await interaction.reply({
+        content:
+          `👤 **User Information**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `👤 **Username:** ${user.tag}\n` +
+          `🆔 **ID:** ${user.id}\n` +
+          `📅 **Account Created:** <t:${createdAt}:R>\n` +
+          `${user.bot ? "🤖 **Type:** Bot" : "👨 **Type:** User"}\n\n` +
+          `💡 Use this command in a server for more details.`,
+        ephemeral: true,
+      });
+      console.log(
+        `✅ ${interaction.user.tag} executed userinfo (DM) for ${user.tag}`
+      );
+      return;
+    }
+
     const member = await interaction.guild.members.fetch(user.id);
 
     const joinedAt = Math.floor(member.joinedTimestamp / 1000);
@@ -1223,6 +1305,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Lock command
   if (interaction.commandName === "lock") {
+    if (requiresGuild(interaction, "lock")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
@@ -1257,6 +1341,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Unlock command
   if (interaction.commandName === "unlock") {
+    if (requiresGuild(interaction, "unlock")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
@@ -1293,6 +1379,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Slowmode command
   if (interaction.commandName === "slowmode") {
+    if (requiresGuild(interaction, "slowmode")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
@@ -1329,6 +1417,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Kick command
   if (interaction.commandName === "kick") {
+    if (requiresGuild(interaction, "kick")) return;
+
     if (!hasPermissionOrRole(interaction.member, "KickMembers")) {
       await interaction.reply({
         content:
@@ -1370,6 +1460,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Ban command
   if (interaction.commandName === "ban") {
+    if (requiresGuild(interaction, "ban")) return;
+
     if (!hasPermissionOrRole(interaction.member, "BanMembers")) {
       await interaction.reply({
         content:
@@ -1411,6 +1503,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Mute command
   if (interaction.commandName === "mute") {
+    if (requiresGuild(interaction, "mute")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
@@ -1457,6 +1551,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Unmute command
   if (interaction.commandName === "unmute") {
+    if (requiresGuild(interaction, "unmute")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
@@ -1496,6 +1592,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Warn command
   if (interaction.commandName === "warn") {
+    if (requiresGuild(interaction, "warn")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ModerateMembers")) {
       await interaction.reply({
         content:
@@ -1526,6 +1624,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Say command
   if (interaction.commandName === "say") {
+    if (requiresGuild(interaction, "say")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
       await interaction.reply({
         content:
@@ -1561,6 +1661,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Poll command
   if (interaction.commandName === "poll") {
+    if (requiresGuild(interaction, "poll")) return;
+
     try {
       const question = interaction.options.getString("question");
       const option1 = interaction.options.getString("option1");
@@ -2637,6 +2739,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Role assign command
   if (interaction.commandName === "role-assign") {
+    if (requiresGuild(interaction, "role-assign")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageRoles")) {
       await interaction.reply({
         content:
@@ -2679,6 +2783,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Role remove command
   if (interaction.commandName === "role-remove") {
+    if (requiresGuild(interaction, "role-remove")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageRoles")) {
       await interaction.reply({
         content:
@@ -2721,6 +2827,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Channel create command
   if (interaction.commandName === "channel-create") {
+    if (requiresGuild(interaction, "channel-create")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
@@ -2761,6 +2869,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Channel delete command
   if (interaction.commandName === "channel-delete") {
+    if (requiresGuild(interaction, "channel-delete")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageChannels")) {
       await interaction.reply({
         content:
@@ -2801,6 +2911,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Welcome command
   if (interaction.commandName === "welcome") {
+    if (requiresGuild(interaction, "welcome")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageGuild")) {
       await interaction.reply({
         content:
@@ -2829,6 +2941,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Settings command
   if (interaction.commandName === "settings") {
+    if (requiresGuild(interaction, "settings")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageGuild")) {
       await interaction.reply({
         content: '❌ You need the "Manage Server" permission to view settings.',
@@ -2866,6 +2980,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Announce command
   if (interaction.commandName === "announce") {
+    if (requiresGuild(interaction, "announce")) return;
+
     if (!hasPermissionOrRole(interaction.member, "ManageMessages")) {
       await interaction.reply({
         content:
@@ -2949,6 +3065,8 @@ client.on("interactionCreate", async (interaction) => {
 
   // Suggest command
   if (interaction.commandName === "suggest") {
+    if (requiresGuild(interaction, "suggest")) return;
+
     const suggestion = interaction.options.getString("suggestion");
 
     // Send to server owner or log
