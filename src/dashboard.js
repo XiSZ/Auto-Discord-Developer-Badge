@@ -18,7 +18,7 @@ const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
 // Create session file store
 const SessionFileStore = FileStore(session);
-const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
   ? join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "sessions")
   : join(__dirname, "..", "sessions");
 
