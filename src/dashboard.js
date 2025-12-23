@@ -1,11 +1,12 @@
 import express from "express";
 import session from "express-session";
+import FileStore from "session-file-store";
 import passport from "passport";
 import { Strategy as DiscordStrategy } from "passport-discord";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, mkdirSync } from "fs";
 
 dotenv.config();
 
@@ -15,9 +16,25 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
-// Session configuration
+// Create session file store
+const SessionFileStore = FileStore(session);
+const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+  ? join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "sessions")
+  : join(__dirname, "..", "sessions");
+
+// Ensure sessions directory exists
+if (!existsSync(sessionPath)) {
+  mkdirSync(sessionPath, { recursive: true });
+}
+
+// Session configuration with file-based store
 app.use(
   session({
+    store: new SessionFileStore({
+      path: sessionPath,
+      ttl: 86400, // 24 hours in seconds
+      retries: 0,
+    }),
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
