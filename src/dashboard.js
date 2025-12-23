@@ -16,6 +16,16 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
+// Public metadata for login screen
+app.get("/api/meta", (req, res) => {
+  res.json({
+    botName: process.env.BOT_NAME || "Bot Dashboard",
+    botAvatarUrl:
+      process.env.BOT_AVATAR_URL ||
+      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f916.png",
+  });
+});
+
 // Create session file store
 const SessionFileStore = FileStore(session);
 const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
@@ -192,7 +202,8 @@ app.get("/api/guild/:guildId/stats", isAuthenticated, async (req, res) => {
 app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
-    const { displayMode, targetLanguages, outputChannelId, channels } = req.body;
+    const { displayMode, targetLanguages, outputChannelId, channels } =
+      req.body;
 
     // Verify user has permission to manage this guild
     const userGuilds = req.user.guilds || [];
