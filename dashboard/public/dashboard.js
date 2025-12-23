@@ -7,6 +7,7 @@ async function checkAuth() {
   try {
     const response = await fetch("/api/user");
     if (!response.ok) {
+      console.error("Auth check failed:", response.status);
       window.location.href = "/";
       return false;
     }
@@ -16,6 +17,8 @@ async function checkAuth() {
     ).textContent = `${user.username}#${user.discriminator}`;
     return true;
   } catch (error) {
+    console.error("Auth error:", error);
+    alert("Failed to authenticate. Please try logging in again.");
     window.location.href = "/";
     return false;
   }
@@ -23,11 +26,16 @@ async function checkAuth() {
 
 // Load user's guilds
 async function loadGuilds() {
+  const container = document.getElementById("serversList");
+  
   try {
     const response = await fetch("/api/guilds");
+    
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+    
     guilds = await response.json();
-
-    const container = document.getElementById("serversList");
 
     if (guilds.length === 0) {
       container.innerHTML = `
@@ -63,7 +71,16 @@ async function loadGuilds() {
       .join("");
   } catch (error) {
     console.error("Error loading guilds:", error);
-    alert("Failed to load servers");
+    container.innerHTML = `
+      <div class="col-12 text-center py-5">
+        <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
+        <h5 class="mt-3 text-danger">Failed to load servers</h5>
+        <p class="text-muted">${error.message}</p>
+        <button class="btn btn-primary mt-3" onclick="loadGuilds()">
+          <i class="bi bi-arrow-clockwise"></i> Retry
+        </button>
+      </div>
+    `;
   }
 }
 
