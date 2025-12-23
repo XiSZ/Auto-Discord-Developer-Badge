@@ -192,7 +192,7 @@ app.get("/api/guild/:guildId/stats", isAuthenticated, async (req, res) => {
 app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
-    const { displayMode, targetLanguages, outputChannelId } = req.body;
+    const { displayMode, targetLanguages, outputChannelId, channels } = req.body;
 
     // Verify user has permission to manage this guild
     const userGuilds = req.user.guilds || [];
@@ -231,6 +231,12 @@ app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
     if (displayMode) config.displayMode = displayMode;
     if (targetLanguages) config.targetLanguages = targetLanguages;
     if (outputChannelId !== undefined) config.outputChannelId = outputChannelId;
+    if (channels) {
+      // Deduplicate channels and filter empties
+      config.channels = Array.from(
+        new Set((channels || []).filter((c) => !!c && `${c}`.trim().length > 0))
+      );
+    }
 
     // Ensure directory exists
     const configDir = dirname(configPath);

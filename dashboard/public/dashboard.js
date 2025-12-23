@@ -226,13 +226,14 @@ async function loadGuildConfig() {
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Output Channel</label>
+                          <label class="form-label">Output Channel</label>
+                          <div class="input-group">
+                            <span class="input-group-text">#</span>
                             <input type="text" class="form-control" id="outputChannel" 
-                                value="${
-                                  config.outputChannelId ||
-                                  "None (same as source)"
-                                }" readonly>
-                            <small class="text-muted">Configure via Discord bot commands</small>
+                              value="${config.outputChannelId || ""}"
+                              placeholder="Channel ID (leave blank for same channel)">
+                          </div>
+                          <small class="text-muted">Optional. Enter a channel ID to redirect translations.</small>
                         </div>
 
                         <button class="btn btn-success w-100" onclick="saveConfig()">
@@ -242,7 +243,7 @@ async function loadGuildConfig() {
                 </div>
 
                 <div class="col-md-6">
-                    <div class="stat-card">
+                        <div class="stat-card">
                         <h5><i class="bi bi-hash"></i> Translation Channels</h5>
                         <hr>
                         <p class="text-muted">
@@ -257,11 +258,13 @@ async function loadGuildConfig() {
                                 ? config.channels
                                     .map(
                                       (channelId) => `
-                                <div class="channel-toggle">
+                                <div class="channel-toggle" data-channel-id="${channelId}">
                                     <div>
                                         <i class="bi bi-hash"></i> Channel: ${channelId}
                                     </div>
-                                    <span class="badge bg-success">Enabled</span>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeChannel('${channelId}')">
+                                      <i class="bi bi-x"></i> Remove
+                                    </button>
                                 </div>
                             `
                                     )
@@ -269,8 +272,16 @@ async function loadGuildConfig() {
                                 : '<p class="text-muted">No channels enabled</p>'
                             }
                         </div>
-                        <small class="text-muted mt-3 d-block">
-                            Use <code>/translate-setup</code> command in Discord to enable channels
+
+                        <div class="input-group mt-3">
+                          <span class="input-group-text">#</span>
+                          <input type="text" class="form-control" id="newChannelId" placeholder="Add channel ID">
+                          <button class="btn btn-primary" onclick="addChannel()">
+                            <i class="bi bi-plus"></i> Add
+                          </button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            Tip: Right-click a channel in Discord → Copy Channel ID (Developer Mode required)
                         </small>
                     </div>
                 </div>
@@ -423,6 +434,52 @@ async function addLanguage() {
   }
 }
 
+// Add channel
+async function addChannel() {
+  const input = document.getElementById("newChannelId");
+  const channelId = input.value.trim();
+
+  if (!channelId) {
+    alert("Please enter a channel ID");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/guild/${currentGuildId}/config`);
+    const config = await response.json();
+
+    if (config.channels.includes(channelId)) {
+      alert("Channel already enabled.");
+      return;
+    }
+
+    config.channels.push(channelId);
+
+    await saveConfigData(config);
+    input.value = "";
+    loadGuildConfig();
+  } catch (error) {
+    alert("Failed to add channel: " + error.message);
+  }
+}
+
+// Remove channel
+async function removeChannel(channelId) {
+  if (!confirm(`Remove channel ${channelId}?`)) return;
+
+  try {
+    const response = await fetch(`/api/guild/${currentGuildId}/config`);
+    const config = await response.json();
+
+    config.channels = config.channels.filter((c) => c !== channelId);
+
+    await saveConfigData(config);
+    loadGuildConfig();
+  } catch (error) {
+    alert("Failed to remove channel: " + error.message);
+  }
+}
+
 // Remove language
 async function removeLanguage(lang) {
   if (!confirm(`Remove language ${lang.toUpperCase()}?`)) return;
@@ -474,6 +531,16 @@ async function saveConfig() {
   const targetLanguages = Array.from(languageBadges).map((badge) =>
     badge.textContent.trim().replace("×", "").trim().toLowerCase()
   );
+  const outputChannelId =
+    document.getElementById("outputChannel").value.trim() || null;
+
+  // Collect channels from list
+  const channelElements = document.querySelectorAll(
+    "#channelsList .channel-toggle"
+  );
+  const channels = Array.from(channelElements).map((el) =>
+    el.getAttribute("data-channel-id")
+  );
 
   try {
     const response = await fetch(`/api/guild/${currentGuildId}/config`, {
@@ -484,6 +551,8 @@ async function saveConfig() {
       body: JSON.stringify({
         displayMode,
         targetLanguages,
+        outputChannelId,
+        channels,
       }),
     });
 
