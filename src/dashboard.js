@@ -205,6 +205,14 @@ app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
   }
 });
 
+// API: Get bot invite link
+app.get("/api/invite", (req, res) => {
+  const clientId = process.env.CLIENT_ID;
+  const permissions = "8"; // Administrator permission
+  const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&scope=bot%20applications.commands`;
+  res.json({ inviteUrl });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🌐 Dashboard running at http://localhost:${PORT}`);

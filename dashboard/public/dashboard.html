@@ -111,6 +111,9 @@
         <a href="#" class="nav-link" data-page="stats">
           <i class="bi bi-bar-chart"></i> Statistics
         </a>
+        <a href="#" class="nav-link" data-page="invite">
+          <i class="bi bi-link-45deg"></i> Invite Bot
+        </a>
         <a href="/auth/logout" class="nav-link">
           <i class="bi bi-box-arrow-right"></i> Logout
         </a>
@@ -158,6 +161,52 @@
 
         <div id="statsContent">
           <p class="text-muted">Select a server first</p>
+        </div>
+      </div>
+
+      <!-- Invite Page -->
+      <div id="invitePage" class="page" style="display: none">
+        <h2 class="mb-4"><i class="bi bi-link-45deg"></i> Invite Bot</h2>
+        
+        <div class="stat-card">
+          <h4 class="mb-3">Add Bot to Your Server</h4>
+          <p class="text-muted mb-4">
+            Use this link to invite the bot to any server where you have "Manage Server" permission.
+          </p>
+          
+          <div class="input-group mb-3">
+            <input 
+              type="text" 
+              class="form-control" 
+              id="inviteLink" 
+              readonly 
+              placeholder="Loading invite link..."
+            />
+            <button class="btn btn-primary" onclick="copyInviteLink()">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+          
+          <button class="btn btn-success" onclick="openInviteLink()">
+            <i class="bi bi-box-arrow-up-right"></i> Open Invite Link
+          </button>
+          
+          <div id="copySuccess" class="alert alert-success mt-3" style="display: none;">
+            <i class="bi bi-check-circle"></i> Link copied to clipboard!
+          </div>
+        </div>
+
+        <div class="stat-card mt-4">
+          <h5><i class="bi bi-info-circle"></i> Bot Permissions</h5>
+          <p class="text-muted mb-2">This invite link includes the following permissions:</p>
+          <ul>
+            <li>Administrator (full server access)</li>
+            <li>Send Messages</li>
+            <li>Manage Messages</li>
+            <li>Use Slash Commands</li>
+            <li>Read Message History</li>
+            <li>Add Reactions</li>
+          </ul>
         </div>
       </div>
     </div>

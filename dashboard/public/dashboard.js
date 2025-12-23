@@ -359,6 +359,51 @@ function showPage(pageName) {
 
   document.getElementById(`${pageName}Page`).style.display = "block";
   document.querySelector(`[data-page="${pageName}"]`)?.classList.add("active");
+
+  // Load invite link when invite page is shown
+  if (pageName === "invite") {
+    loadInviteLink();
+  }
+}
+
+// Load bot invite link
+async function loadInviteLink() {
+  try {
+    const response = await fetch("/api/invite");
+    const data = await response.json();
+    document.getElementById("inviteLink").value = data.inviteUrl;
+  } catch (error) {
+    document.getElementById("inviteLink").value = "Error loading invite link";
+    console.error("Failed to load invite link:", error);
+  }
+}
+
+// Copy invite link to clipboard
+function copyInviteLink() {
+  const inviteInput = document.getElementById("inviteLink");
+  inviteInput.select();
+  inviteInput.setSelectionRange(0, 99999); // For mobile devices
+
+  navigator.clipboard
+    .writeText(inviteInput.value)
+    .then(() => {
+      const successAlert = document.getElementById("copySuccess");
+      successAlert.style.display = "block";
+      setTimeout(() => {
+        successAlert.style.display = "none";
+      }, 3000);
+    })
+    .catch((err) => {
+      alert("Failed to copy: " + err);
+    });
+}
+
+// Open invite link in new tab
+function openInviteLink() {
+  const inviteUrl = document.getElementById("inviteLink").value;
+  if (inviteUrl && inviteUrl !== "Error loading invite link") {
+    window.open(inviteUrl, "_blank");
+  }
 }
 
 // Navigation click handlers
