@@ -5019,6 +5019,15 @@ client.on("inviteDelete", async (invite) => {
 // END GUILD ACTIVITY TRACKING
 // ============================================
 
+// Auto-reload configuration every 30 seconds to pick up dashboard changes
+setInterval(() => {
+  try {
+    loadTranslationData();
+  } catch (error) {
+    logger.error(`Failed to reload translation config: ${error.message}`);
+  }
+}, 30000); // 30 seconds
+
 // Error handling
 client.on("error", (error) => {
   console.error("❌ Discord client error:", error);

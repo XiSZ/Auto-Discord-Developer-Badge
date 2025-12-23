@@ -78,12 +78,71 @@ function selectGuild(guildId, guildName) {
   });
   event.target.closest(".server-card").classList.add("active");
 
+  // Update server headers
+  updateServerHeaders();
+
   // Load guild data
   loadGuildConfig();
   loadGuildStats();
 
   // Show translation page
   showPage("translation");
+}
+
+// Update server headers and switchers
+function updateServerHeaders() {
+  const currentGuild = guilds.find((g) => g.id === currentGuildId);
+  if (!currentGuild) return;
+
+  const iconUrl = currentGuild.icon
+    ? `https://cdn.discordapp.com/icons/${currentGuild.id}/${currentGuild.icon}.png`
+    : "https://cdn.discordapp.com/embed/avatars/0.png";
+
+  // Update translation page header
+  document.getElementById("currentServerIcon").src = iconUrl;
+  document.getElementById("currentServerName").textContent = currentGuild.name;
+  document.getElementById("serverHeader").style.display = "block";
+
+  // Update stats page header
+  document.getElementById("statsServerIcon").src = iconUrl;
+  document.getElementById("statsServerName").textContent = currentGuild.name;
+  document.getElementById("statsServerHeader").style.display = "block";
+
+  // Populate server switcher dropdowns
+  const switcherHTML = guilds
+    .map((guild) => {
+      const isActive = guild.id === currentGuildId;
+      const gIcon = guild.icon
+        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+        : "https://cdn.discordapp.com/embed/avatars/0.png";
+      return `
+        <li>
+          <a class="dropdown-item ${isActive ? 'active' : ''}" href="#" 
+             onclick="switchToServer('${guild.id}', '${guild.name.replace(/'/g, "\\'")}')
+             event.preventDefault(); return false;">
+            <img src="${gIcon}" width="20" height="20" class="rounded-circle me-2">
+            ${guild.name}
+          </a>
+        </li>
+      `;
+    })
+    .join("");
+
+  document.getElementById("serverSwitcher").innerHTML = switcherHTML;
+  document.getElementById("statsServerSwitcher").innerHTML = switcherHTML;
+}
+
+// Switch to a different server
+function switchToServer(guildId, guildName) {
+  currentGuildId = guildId;
+  currentGuildName = guildName;
+
+  // Update headers
+  updateServerHeaders();
+
+  // Reload data for new server
+  loadGuildConfig();
+  loadGuildStats();
 }
 
 // Load guild translation config
@@ -309,7 +368,7 @@ async function loadGuildStats() {
 }
 
 // Add language
-function addLanguage() {
+async function addLanguage() {
   const input = document.getElementById("newLanguage");
   const lang = input.value.trim().toLowerCase();
 
@@ -318,33 +377,153 @@ function addLanguage() {
     return;
   }
 
-  if (lang.length > 5) {
-    alert("Language code too long");
+  if (lang.length < 2 || lang.length > 5) {
+    alert("Invalid language code. Use 2-5 characters (e.g., en, es, zh-CN)");
     return;
   }
 
-  // Reload to add language (in production, would update via API)
-  alert(
-    `Language ${lang.toUpperCase()} will be added. Use /translate-add-language ${lang} in Discord to activate.`
-  );
-  input.value = "";
-}
+  try {
+    const response = await fetch(`/api/guild/${currentGuildId}/config`);
+    const config = await response.json();
 
-// Remove language
-function removeLanguage(lang) {
-  if (confirm(`Remove language ${lang.toUpperCase()}?`)) {
-    alert(`Use /translate-remove-language ${lang} in Discord to remove.`);
+    if (config.targetLanguages.includes(lang)) {
+      alert(`Language ${lang.toUpperCase()} is already added.`);
+      return;
+    }
+
+    config.targetLanguages.push(lang);
+
+    await saveConfigData(config);
+    input.value = "";
+    loadGuildConfig();
+  } catch (error) {
+    alert("Failed to add language: " + error.message);
   }
 }
 
-// Save configuration
-function saveConfig() {
-  const displayMode = document.getElementById("displayMode").value;
+// Remove language
+async function removeLanguage(lang) {
+  if (!confirm(`Remove language ${lang.toUpperCase()}?`)) return;
 
-  // In production, would send to API
-  alert(
-    `Configuration saved! Use /translate-config ${displayMode} in Discord to apply changes.`
+  try {
+    const response = await fetch(`/api/guild/${currentGuildId}/config`);
+    const config = await response.json();
+
+    config.targetLanguages = config.targetLanguages.filter((l) => l !== lang);
+
+    if (config.targetLanguages.length === 0) {
+      alert("Cannot remove the last language. At least one language is required.");
+      return;
+    }
+
+    await saveConfigData(config);
+    loadGuildConfig();
+  } catch (error) {
+    alert("Failed to remove language: " + error.message);
+  }
+}
+
+// Helper function to save config data
+async function saveConfigData(config) {
+  const response = await fetch(`/api/guild/${currentGuildId}/config`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(config),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Failed to save configuration");
+  }
+
+  return result;
+}
+
+// Save configuration
+async function saveConfig() {
+  const displayMode = document.getElementById("displayMode").value;
+  const languagesList = document.getElementById("languagesList");
+  const languageBadges = languagesList.querySelectorAll(".language-badge");
+  const targetLanguages = Array.from(languageBadges).map((badge) =>
+    badge.textContent.trim().replace("×", "").trim().toLowerCase()
   );
+
+  try {
+    const response = await fetch(`/api/guild/${currentGuildId}/config`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayMode,
+        targetLanguages,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Show success message
+      const successAlert = document.createElement("div");
+      successAlert.className = "alert alert-success mt-3";
+      successAlert.innerHTML = `
+        <i class="bi bi-check-circle"></i> ${result.message}
+        <br><small>Changes will take effect for new translations.</small>
+      `;
+      document.getElementById("translationContent").insertBefore(
+        successAlert,
+        document.getElementById("translationContent").firstChild
+      );
+
+      setTimeout(() => successAlert.remove(), 5000);
+
+      // Reload config
+      loadGuildConfig();
+    } else {
+      alert(`Error: ${result.error || "Failed to save configuration"}`);
+    }
+  } catch (error) {
+    alert("Failed to save configuration: " + error.message);
+  }
+}
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayMode,
+        targetLanguages,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Show success message
+      const successAlert = document.createElement("div");
+      successAlert.className = "alert alert-success mt-3";
+      successAlert.innerHTML = `
+        <i class="bi bi-check-circle"></i> ${result.message}
+        <br><small>Changes will take effect for new translations.</small>
+      `;
+      document.getElementById("translationContent").insertBefore(
+        successAlert,
+        document.getElementById("translationContent").firstChild
+      );
+
+      setTimeout(() => successAlert.remove(), 5000);
+
+      // Reload config
+      loadGuildConfig();
+    } else {
+      alert(`Error: ${result.error || "Failed to save configuration"}`);
+    }
+  } catch (error) {
+    alert("Failed to save configuration: " + error.message);
+  }
 }
 
 // Page navigation

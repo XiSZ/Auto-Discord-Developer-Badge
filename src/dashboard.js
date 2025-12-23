@@ -6,7 +6,7 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { readFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 
 dotenv.config();
 
@@ -192,14 +192,56 @@ app.get("/api/guild/:guildId/stats", isAuthenticated, async (req, res) => {
 app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
-    const config = req.body;
+    const { displayMode, targetLanguages, outputChannelId } = req.body;
 
-    // In a real implementation, you would:
-    // 1. Verify user has permission to manage this guild
-    // 2. Send update to bot via IPC or shared file system
-    // 3. Have bot reload configuration
+    // Verify user has permission to manage this guild
+    const userGuilds = req.user.guilds || [];
+    const hasPermission = userGuilds.some(
+      (g) => g.id === guildId && (g.permissions & 0x20) === 0x20
+    );
 
-    res.json({ success: true, message: "Configuration updated" });
+    if (!hasPermission) {
+      return res
+        .status(403)
+        .json({ error: "No permission to manage this server" });
+    }
+
+    // Load existing config
+    const configPath = join(
+      __dirname,
+      "..",
+      "data",
+      "servers",
+      guildId,
+      "translation-config.json"
+    );
+
+    let config = {
+      channels: [],
+      displayMode: "reply",
+      targetLanguages: ["en"],
+      outputChannelId: null,
+    };
+
+    if (existsSync(configPath)) {
+      config = JSON.parse(readFileSync(configPath, "utf-8"));
+    }
+
+    // Update config
+    if (displayMode) config.displayMode = displayMode;
+    if (targetLanguages) config.targetLanguages = targetLanguages;
+    if (outputChannelId !== undefined) config.outputChannelId = outputChannelId;
+
+    // Ensure directory exists
+    const configDir = dirname(configPath);
+    if (!existsSync(configDir)) {
+      mkdirSync(configDir, { recursive: true });
+    }
+
+    // Save config
+    writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+
+    res.json({ success: true, message: "Configuration updated successfully!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -98,8 +98,50 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="px-3 mb-4">
-        <h4><i class="bi bi-robot"></i> Bot Control</h4>
-        <small class="text-muted" id="userInfo">Loading...</small>
+        <h4 class="mb-3"><i class="bi bi-robot"></i> Bot Control</h4>
+        <div
+          class="card"
+          style="background: rgba(255, 255, 255, 0.1); border: none"
+        >
+          <div class="card-body p-2">
+            <div class="d-flex align-items-center">
+              <div
+                class="bg-primary rounded-circle p-2 me-2"
+                style="
+                  width: 40px;
+                  height: 40px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i
+                  class="bi bi-person-fill"
+                  style="font-size: 1.2rem; color: white"
+                ></i>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <div
+                  id="userInfo"
+                  style="
+                    color: white;
+                    font-weight: 500;
+                    font-size: 0.9rem;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  "
+                >
+                  Loading...
+                </div>
+                <small
+                  style="color: rgba(255, 255, 255, 0.7); font-size: 0.75rem"
+                  >Logged in</small
+                >
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <nav>
         <a href="#" class="nav-link active" data-page="servers">
@@ -138,6 +180,40 @@
 
       <!-- Translation Page -->
       <div id="translationPage" class="page" style="display: none">
+        <!-- Server Header -->
+        <div class="stat-card mb-3" id="serverHeader" style="display: none">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <img
+                id="currentServerIcon"
+                src=""
+                alt=""
+                class="rounded-circle me-3"
+                width="50"
+                height="50"
+              />
+              <div>
+                <h5 class="mb-0" id="currentServerName">Loading...</h5>
+                <small class="text-muted"
+                  >Configuring translation settings</small
+                >
+              </div>
+            </div>
+            <div class="dropdown">
+              <button
+                class="btn btn-outline-primary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+              >
+                <i class="bi bi-arrow-left-right"></i> Switch Server
+              </button>
+              <ul class="dropdown-menu" id="serverSwitcher">
+                <!-- Populated by JS -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2><i class="bi bi-translate"></i> Translation Settings</h2>
           <button class="btn btn-secondary" onclick="showPage('servers')">
@@ -152,6 +228,42 @@
 
       <!-- Statistics Page -->
       <div id="statsPage" class="page" style="display: none">
+        <!-- Server Header -->
+        <div
+          class="stat-card mb-3"
+          id="statsServerHeader"
+          style="display: none"
+        >
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <img
+                id="statsServerIcon"
+                src=""
+                alt=""
+                class="rounded-circle me-3"
+                width="50"
+                height="50"
+              />
+              <div>
+                <h5 class="mb-0" id="statsServerName">Loading...</h5>
+                <small class="text-muted">Viewing translation statistics</small>
+              </div>
+            </div>
+            <div class="dropdown">
+              <button
+                class="btn btn-outline-primary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+              >
+                <i class="bi bi-arrow-left-right"></i> Switch Server
+              </button>
+              <ul class="dropdown-menu" id="statsServerSwitcher">
+                <!-- Populated by JS -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2><i class="bi bi-bar-chart"></i> Translation Statistics</h2>
           <button class="btn btn-secondary" onclick="showPage('servers')">
@@ -167,38 +279,45 @@
       <!-- Invite Page -->
       <div id="invitePage" class="page" style="display: none">
         <h2 class="mb-4"><i class="bi bi-link-45deg"></i> Invite Bot</h2>
-        
+
         <div class="stat-card">
           <h4 class="mb-3">Add Bot to Your Server</h4>
           <p class="text-muted mb-4">
-            Use this link to invite the bot to any server where you have "Manage Server" permission.
+            Use this link to invite the bot to any server where you have "Manage
+            Server" permission.
           </p>
-          
+
           <div class="input-group mb-3">
-            <input 
-              type="text" 
-              class="form-control" 
-              id="inviteLink" 
-              readonly 
+            <input
+              type="text"
+              class="form-control"
+              id="inviteLink"
+              readonly
               placeholder="Loading invite link..."
             />
             <button class="btn btn-primary" onclick="copyInviteLink()">
               <i class="bi bi-clipboard"></i> Copy
             </button>
           </div>
-          
+
           <button class="btn btn-success" onclick="openInviteLink()">
             <i class="bi bi-box-arrow-up-right"></i> Open Invite Link
           </button>
-          
-          <div id="copySuccess" class="alert alert-success mt-3" style="display: none;">
+
+          <div
+            id="copySuccess"
+            class="alert alert-success mt-3"
+            style="display: none"
+          >
             <i class="bi bi-check-circle"></i> Link copied to clipboard!
           </div>
         </div>
 
         <div class="stat-card mt-4">
           <h5><i class="bi bi-info-circle"></i> Bot Permissions</h5>
-          <p class="text-muted mb-2">This invite link includes the following permissions:</p>
+          <p class="text-muted mb-2">
+            This invite link includes the following permissions:
+          </p>
           <ul>
             <li>Administrator (full server access)</li>
             <li>Send Messages</li>
