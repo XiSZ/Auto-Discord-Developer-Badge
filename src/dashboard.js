@@ -214,7 +214,7 @@ app.get("/api/invite", (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🌐 Dashboard running at http://localhost:${PORT}`);
-  console.log(`📊 Login URL: http://localhost:${PORT}/auth/discord`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Dashboard running on port ${PORT}`);
+  console.log(`📊 Access at: http://0.0.0.0:${PORT}`);
 });
