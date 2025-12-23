@@ -81,7 +81,10 @@ const twitchNotificationChannels = new Map(); // Map<guildId, channelId>
 const twitchStreamStatus = new Map(); // Map<streamerUsername, isLive>
 
 // Translation configuration per guild
-const translationConfig = new Map(); // Map<guildId, { channels: Set<channelId>, displayMode: string, targetLanguage: string, outputChannelId: string }>
+const translationConfig = new Map(); // Map<guildId, { channels: Set<channelId>, displayMode: string, targetLanguages: Array<string>, outputChannelId: string }>
+
+// Translation statistics per guild
+const translationStats = new Map(); // Map<guildId, { total: number, byLanguagePair: Map<string, number>, byChannel: Map<channelId, number> }>
 
 // Persistent data directory - use Railway volume if available, otherwise local
 const DATA_DIR =
@@ -198,7 +201,7 @@ function saveTranslationConfig(guildId) {
     const data = {
       channels: Array.from(config?.channels || []),
       displayMode: config?.displayMode || "reply",
-      targetLanguage: config?.targetLanguage || "en",
+      targetLanguages: config?.targetLanguages || ["en"],
       outputChannelId: config?.outputChannelId || null,
     };
 
@@ -231,7 +234,9 @@ function loadTranslationData() {
             translationConfig.set(guildId, {
               channels: new Set(data.channels || []),
               displayMode: data.displayMode || "reply",
-              targetLanguage: data.targetLanguage || "en",
+              targetLanguages:
+                data.targetLanguages ||
+                (data.targetLanguage ? [data.targetLanguage] : ["en"]),
               outputChannelId: data.outputChannelId || null,
             });
 
@@ -263,7 +268,7 @@ function ensureTranslationConfig(guildId) {
     translationConfig.set(guildId, {
       channels: new Set(),
       displayMode: "reply",
-      targetLanguage: "en",
+      targetLanguages: ["en"],
       outputChannelId: null,
     });
   }
@@ -283,12 +288,108 @@ function getTranslationDisplayMode(guildId) {
 
 // Helper: get translation target language
 function getTranslationTargetLanguage(guildId) {
-  return translationConfig.get(guildId)?.targetLanguage || "en";
+  const languages = translationConfig.get(guildId)?.targetLanguages || ["en"];
+  return languages[0]; // Return first language for backward compatibility
+}
+
+// Helper: get translation target languages
+function getTranslationTargetLanguages(guildId) {
+  return translationConfig.get(guildId)?.targetLanguages || ["en"];
 }
 
 // Helper: get translation output channel
 function getTranslationOutputChannel(guildId) {
   return translationConfig.get(guildId)?.outputChannelId || null;
+}
+
+// Helper: ensure translation stats exists for a guild
+function ensureTranslationStats(guildId) {
+  if (!translationStats.has(guildId)) {
+    translationStats.set(guildId, {
+      total: 0,
+      byLanguagePair: new Map(),
+      byChannel: new Map(),
+    });
+  }
+  return translationStats.get(guildId);
+}
+
+// Helper: record translation stats
+function recordTranslation(guildId, fromLang, toLang, channelId) {
+  const stats = ensureTranslationStats(guildId);
+  stats.total++;
+
+  const pairKey = `${fromLang}->${toLang}`;
+  stats.byLanguagePair.set(
+    pairKey,
+    (stats.byLanguagePair.get(pairKey) || 0) + 1
+  );
+  stats.byChannel.set(channelId, (stats.byChannel.get(channelId) || 0) + 1);
+
+  saveTranslationStats(guildId);
+}
+
+// Save translation stats for a specific server
+function saveTranslationStats(guildId) {
+  try {
+    ensureServerDirectory(guildId);
+
+    const configPath = join(SERVERS_DIR, guildId, "translation-stats.json");
+    const stats = translationStats.get(guildId);
+    const data = {
+      total: stats?.total || 0,
+      byLanguagePair: Object.fromEntries(stats?.byLanguagePair || new Map()),
+      byChannel: Object.fromEntries(stats?.byChannel || new Map()),
+    };
+
+    saveConfigFile(configPath, data, "translation stats", guildId);
+  } catch (error) {
+    logger.error(
+      `Failed to save translation stats for server ${guildId}: ${error.message}`
+    );
+  }
+}
+
+// Load translation stats from all server config files
+function loadTranslationStats() {
+  if (!fileOps.exists(SERVERS_DIR)) {
+    return;
+  }
+
+  try {
+    const serverDirs = readdirSync(SERVERS_DIR);
+    let loadedCount = 0;
+
+    for (const guildId of serverDirs) {
+      const configPath = join(SERVERS_DIR, guildId, "translation-stats.json");
+
+      if (existsSync(configPath)) {
+        try {
+          const data = fileOps.readJSON(configPath);
+          if (data) {
+            translationStats.set(guildId, {
+              total: data.total || 0,
+              byLanguagePair: new Map(
+                Object.entries(data.byLanguagePair || {})
+              ),
+              byChannel: new Map(Object.entries(data.byChannel || {})),
+            });
+            loadedCount++;
+          }
+        } catch (error) {
+          logger.error(
+            `Failed to parse translation stats for server ${guildId}: ${error.message}`
+          );
+        }
+      }
+    }
+
+    if (loadedCount > 0) {
+      logger.success(`Loaded translation stats for ${loadedCount} server(s)`);
+    }
+  } catch (error) {
+    logger.error(`Failed to load translation stats: ${error.message}`);
+  }
 }
 
 // Helper: get human-readable language name from ISO code
@@ -1107,6 +1208,7 @@ client.once("clientReady", () => {
 
   // Load translation configuration from disk
   loadTranslationData();
+  loadTranslationStats();
 
   // Initialize Twitch API if credentials are available
   if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_ACCESS_TOKEN) {
@@ -1205,6 +1307,10 @@ client.on("interactionCreate", async (interaction) => {
         `\`/translate-setup <channel>\` – Enable auto-translation\n` +
         `\`/translate-config <display-mode>\` – Configure translation\n` +
         `\`/translate-output-channel <channel>\` – Set output channel for translations\n` +
+        `\`/translate-clear-output\` – Clear output channel\n` +
+        `\`/translate-add-language <lang>\` – Add target language\n` +
+        `\`/translate-remove-language <lang>\` – Remove target language\n` +
+        `\`/translate-stats\` – View translation statistics\n` +
         `\`/translate-disable <channel>\` – Disable auto-translation\n` +
         `\`/translate-list\` – View enabled channels\n` +
         `\`/translate-status\` – View translation settings\n` +
@@ -3410,15 +3516,17 @@ client.on("interactionCreate", async (interaction) => {
     // Ensure config exists
     const config = ensureTranslationConfig(guildId);
     config.channels.add(channel.id);
-    if (targetLanguage) config.targetLanguage = targetLanguage;
+    if (targetLanguage && !config.targetLanguages.includes(targetLanguage)) {
+      config.targetLanguages = [targetLanguage];
+    }
 
     // Save configuration
     saveTranslationConfig(guildId);
 
     await interaction.reply({
-      content: `✅ Auto-translation enabled for ${channel}\n🌐 Target language: **${targetLanguage.toUpperCase()}**\n📤 Display mode: **${
-        config.displayMode
-      }**`,
+      content: `✅ Auto-translation enabled for ${channel}\n🌐 Target languages: **${config.targetLanguages
+        .map((l) => l.toUpperCase())
+        .join(", ")}**\n📤 Display mode: **${config.displayMode}**`,
       ephemeral: true,
     });
 
@@ -3438,7 +3546,7 @@ client.on("interactionCreate", async (interaction) => {
     // Ensure config exists
     const config = ensureTranslationConfig(guildId);
     if (displayMode) config.displayMode = displayMode;
-    if (defaultLanguage) config.targetLanguage = defaultLanguage;
+    if (defaultLanguage) config.targetLanguages = [defaultLanguage];
 
     // Save configuration
     saveTranslationConfig(guildId);
@@ -3447,7 +3555,9 @@ client.on("interactionCreate", async (interaction) => {
       content:
         `✅ Translation settings updated!\n` +
         `📤 Display mode: **${config.displayMode}**\n` +
-        `🌐 Default language: **${config.targetLanguage.toUpperCase()}**`,
+        `🌐 Target languages: **${config.targetLanguages
+          .map((l) => l.toUpperCase())
+          .join(", ")}**`,
       ephemeral: true,
     });
 
@@ -3478,6 +3588,163 @@ client.on("interactionCreate", async (interaction) => {
     console.log(
       `🌐 ${interaction.user.tag} set translation output channel to ${outputChannel.name} (${guildId})`
     );
+  }
+
+  // Translate clear output channel command
+  if (interaction.commandName === "translate-clear-output") {
+    if (requiresGuild(interaction, "translate-clear-output")) return;
+
+    const guildId = interaction.guild.id;
+
+    // Ensure config exists
+    const config = ensureTranslationConfig(guildId);
+    config.outputChannelId = null;
+
+    // Save configuration
+    saveTranslationConfig(guildId);
+
+    await interaction.reply({
+      content: `✅ Output channel cleared! Translations will now appear in their source channels.`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `🌐 ${interaction.user.tag} cleared translation output channel (${guildId})`
+    );
+  }
+
+  // Translate add language command
+  if (interaction.commandName === "translate-add-language") {
+    if (requiresGuild(interaction, "translate-add-language")) return;
+
+    const language = interaction.options.getString("language");
+    const guildId = interaction.guild.id;
+
+    // Ensure config exists
+    const config = ensureTranslationConfig(guildId);
+
+    if (config.targetLanguages.includes(language)) {
+      await interaction.reply({
+        content: `❌ Language **${language.toUpperCase()}** is already in the target list.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    config.targetLanguages.push(language);
+
+    // Save configuration
+    saveTranslationConfig(guildId);
+
+    await interaction.reply({
+      content: `✅ Added **${language.toUpperCase()}** to target languages!\n🌐 Current languages: **${config.targetLanguages
+        .map((l) => l.toUpperCase())
+        .join(", ")}**`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `🌐 ${interaction.user.tag} added language ${language} (${guildId})`
+    );
+  }
+
+  // Translate remove language command
+  if (interaction.commandName === "translate-remove-language") {
+    if (requiresGuild(interaction, "translate-remove-language")) return;
+
+    const language = interaction.options.getString("language");
+    const guildId = interaction.guild.id;
+
+    // Ensure config exists
+    const config = ensureTranslationConfig(guildId);
+
+    if (!config.targetLanguages.includes(language)) {
+      await interaction.reply({
+        content: `❌ Language **${language.toUpperCase()}** is not in the target list.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (config.targetLanguages.length === 1) {
+      await interaction.reply({
+        content: `❌ Cannot remove the last target language. Add another language first.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    config.targetLanguages = config.targetLanguages.filter(
+      (l) => l !== language
+    );
+
+    // Save configuration
+    saveTranslationConfig(guildId);
+
+    await interaction.reply({
+      content: `✅ Removed **${language.toUpperCase()}** from target languages!\n🌐 Current languages: **${config.targetLanguages
+        .map((l) => l.toUpperCase())
+        .join(", ")}**`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `🌐 ${interaction.user.tag} removed language ${language} (${guildId})`
+    );
+  }
+
+  // Translate stats command
+  if (interaction.commandName === "translate-stats") {
+    if (requiresGuild(interaction, "translate-stats")) return;
+
+    const guildId = interaction.guild.id;
+    const stats = translationStats.get(guildId);
+
+    if (!stats || stats.total === 0) {
+      await interaction.reply({
+        content: `📊 No translation statistics available yet.\n💡 Start translating messages to see stats!`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Top language pairs
+    const topPairs = Array.from(stats.byLanguagePair.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([pair, count]) => `• **${pair}**: ${count} translations`)
+      .join("\n");
+
+    // Top channels
+    const topChannels = Array.from(stats.byChannel.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([channelId, count]) => `• <#${channelId}>: ${count} translations`)
+      .join("\n");
+
+    const embed = new EmbedBuilder()
+      .setColor(0x4285f4)
+      .setTitle("📊 Translation Statistics")
+      .setDescription(`**Total Translations:** ${stats.total}`)
+      .addFields(
+        {
+          name: "🌐 Top Language Pairs",
+          value: topPairs || "(none)",
+          inline: false,
+        },
+        {
+          name: "📍 Most Active Channels",
+          value: topChannels || "(none)",
+          inline: false,
+        }
+      )
+      .setFooter({ text: `Server: ${interaction.guild.name}` })
+      .setTimestamp();
+
+    await interaction.reply({
+      embeds: [embed],
+      ephemeral: true,
+    });
   }
 
   // Translate disable command
@@ -3537,7 +3804,9 @@ client.on("interactionCreate", async (interaction) => {
         `📋 **Auto-Translation Enabled Channels:**\n${channelList}\n\n` +
         `⚙️ **Settings:**\n` +
         `📤 Display mode: **${config.displayMode}**\n` +
-        `🌐 Target language: **${config.targetLanguage.toUpperCase()}**\n` +
+        `🌐 Target languages: **${config.targetLanguages
+          .map((l) => l.toUpperCase())
+          .join(", ")}**\n` +
         `📍 Output channel: **${outputChannel}**`,
       ephemeral: true,
     });
@@ -3560,14 +3829,16 @@ client.on("interactionCreate", async (interaction) => {
       ? `<#${config.outputChannelId}>`
       : "(same as source channels)";
 
-    const targetLang = getTranslationTargetLanguage(guildId).toUpperCase();
+    const targetLanguages = getTranslationTargetLanguages(guildId);
     const displayMode = getTranslationDisplayMode(guildId);
 
     await interaction.reply({
       content:
         `🌐 **Translation Status**\n` +
         `📤 Display mode: **${displayMode}**\n` +
-        `🎯 Target language: **${targetLang}**\n` +
+        `🎯 Target languages: **${targetLanguages
+          .map((l) => l.toUpperCase())
+          .join(", ")}**\n` +
         `📍 Output channel: **${outputChannel}**\n\n` +
         `📋 **Enabled Channels:**\n${channelsText}`,
       ephemeral: true,
@@ -3709,6 +3980,18 @@ client.on("messageCreate", async (message) => {
       `\`/echo <text>\` – Echo back text\n` +
       `\`/notify <user> <message>\` – Send DM notification\n` +
       `\`/twitch-notify\` – Manage Twitch live notifications\n` +
+      `\n**Translation:**\n` +
+      `\`/translate <text> [to] [from]\` – Translate text\n` +
+      `\`/translate-setup <channel>\` – Enable auto-translation\n` +
+      `\`/translate-config <mode>\` – Configure display mode\n` +
+      `\`/translate-output-channel <channel>\` – Set output channel\n` +
+      `\`/translate-clear-output\` – Clear output channel\n` +
+      `\`/translate-add-language <lang>\` – Add target language\n` +
+      `\`/translate-remove-language <lang>\` – Remove language\n` +
+      `\`/translate-stats\` – View translation statistics\n` +
+      `\`/translate-disable <channel>\` – Disable translation\n` +
+      `\`/translate-list\` – List enabled channels\n` +
+      `\`/translate-status\` – View settings\n` +
       `\n**Information:**\n` +
       `\`/roleinfo <role>\` – Get role details\n` +
       `\`/channelinfo [channel]\` – Get channel details\n` +
@@ -3833,20 +4116,45 @@ client.on("messageCreate", async (message) => {
     // Dynamically import Google Translate
     const translate = (await import("@iamtraction/google-translate")).default;
 
-    // Detect language and translate
-    const targetLang = getTranslationTargetLanguage(guildId);
+    // Get target languages
+    const targetLanguages = getTranslationTargetLanguages(guildId);
     const cleaned = stripEmotes(message.content);
     if (!cleaned) return;
-    const result = await translate(cleaned, { to: targetLang });
 
-    // Only respond if source language is different from target
-    if (result.from.language.iso !== targetLang) {
+    // Detect source language first
+    const detectionResult = await translate(cleaned, {
+      to: targetLanguages[0],
+    });
+    const sourceLang = detectionResult.from.language.iso;
+    const sourceName = getLanguageName(sourceLang);
+    const sourceFlag = getLanguageFlag(sourceLang);
+
+    // Filter out target languages that match the source
+    const languagesToTranslate = targetLanguages.filter(
+      (lang) => lang !== sourceLang
+    );
+
+    if (languagesToTranslate.length === 0) return;
+
+    // Add reaction to original message
+    try {
+      await message.react(sourceFlag);
+    } catch (error) {
+      console.error(`Failed to add reaction: ${error.message}`);
+    }
+
+    // Translate to each target language
+    for (const targetLang of languagesToTranslate) {
+      const result = await translate(cleaned, { to: targetLang });
+      const translatedText = result.text;
+      const targetLangUpper = targetLang.toUpperCase();
+      const sourceLangUpper = sourceLang.toUpperCase();
+
+      // Record stats
+      recordTranslation(guildId, sourceLang, targetLang, channelId);
+
       const displayMode = getTranslationDisplayMode(guildId);
       const outputChannelId = getTranslationOutputChannel(guildId);
-      const translatedText = result.text;
-      const sourceLang = result.from.language.iso.toUpperCase();
-      const sourceName = getLanguageName(result.from.language.iso);
-      const sourceFlag = getLanguageFlag(result.from.language.iso);
 
       // Determine where to send the translation
       let targetChannel = message.channel;
@@ -3875,10 +4183,14 @@ client.on("messageCreate", async (message) => {
             iconURL: message.author.displayAvatarURL(),
           })
           .setDescription(
-            `**Original (${sourceFlag} ${sourceName} — ${sourceLang}):**\n${message.content}\n\n**Translation:**\n${translatedText}`
+            `**Original (${sourceFlag} ${sourceName} — ${sourceLangUpper}):**\n${
+              message.content
+            }\n\n**Translation (${getLanguageFlag(
+              targetLang
+            )} ${targetLangUpper}):**\n${translatedText}`
           )
           .setFooter({
-            text: `Translated by Google Translate • ${sourceLang} → ${targetLang.toUpperCase()}`,
+            text: `Translated by Google Translate • ${sourceLangUpper} → ${targetLangUpper}`,
           })
           .setTimestamp();
 
@@ -3895,11 +4207,13 @@ client.on("messageCreate", async (message) => {
       } else if (displayMode === "thread") {
         // Create a thread for the translation
         const thread = await targetChannel.threads.create({
-          name: `Translation (${sourceLang} → ${targetLang.toUpperCase()})`,
+          name: `Translation (${sourceLangUpper} → ${targetLangUpper})`,
           autoArchiveDuration: 60,
         });
 
-        let threadMessage = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLang}):**\n${translatedText}`;
+        let threadMessage = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLangUpper} to ${getLanguageFlag(
+          targetLang
+        )} ${targetLangUpper}):**\n${translatedText}`;
         if (outputChannelId) {
           threadMessage += `\n\n**Source:** ${message.author.username} in <#${message.channel.id}>`;
         }
@@ -3907,7 +4221,9 @@ client.on("messageCreate", async (message) => {
         await thread.send(threadMessage);
       } else {
         // Default: reply mode
-        let replyText = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLang} → ${targetLang.toUpperCase()}):**\n${translatedText}`;
+        let replyText = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLangUpper} → ${getLanguageFlag(
+          targetLang
+        )} ${targetLangUpper}):**\n${translatedText}`;
 
         // If sending to output channel, mention the original author
         if (outputChannelId) {

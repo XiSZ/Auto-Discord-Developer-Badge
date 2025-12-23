@@ -249,7 +249,7 @@ The setup guide (`invite-bot.html`) is automatically generated from your `.env` 
 - `/translate-setup <channel> [target-language]` - Enable auto-translation for a specific channel
   - `channel` (required): Channel to enable auto-translation in
   - `target-language` (optional): Target language code (default: en)
-  - **How it works**: Bot will automatically detect and translate non-English messages in the configured channel
+  - **How it works**: Bot will automatically detect and translate messages in the configured channel
   - **Permissions Required**: Manage Server
 - `/translate-config <display-mode> [default-language]` - Configure how translations are displayed
   - `display-mode` (required): Choose how translations appear
@@ -258,26 +258,49 @@ The setup guide (`invite-bot.html`) is automatically generated from your `.env` 
     - `thread` - Create a thread for the translation
   - `default-language` (optional): Set the default target language for all translations
   - **Permissions Required**: Manage Server
+- `/translate-output-channel <channel>` - Set a dedicated output channel for translations
+  - `channel` (required): Channel where all translations will be sent
+  - **Use case**: Send all translations from multiple channels to one dedicated translation channel
+  - **Permissions Required**: Manage Server
+- `/translate-clear-output` - Clear the output channel setting
+  - Translations will return to appearing in their source channels
+  - **Permissions Required**: Manage Server
+- `/translate-add-language <language>` - Add a target language for translation
+  - `language` (required): Language code to add (e.g., en, es, de, fr, ja)
+  - **Multi-language support**: Messages translate to ALL configured languages simultaneously
+  - **Permissions Required**: Manage Server
+- `/translate-remove-language <language>` - Remove a target language
+  - `language` (required): Language code to remove
+  - **Note**: Cannot remove the last language
+  - **Permissions Required**: Manage Server
+- `/translate-stats` - View translation statistics
+  - Shows total translations, top language pairs, and most active channels
+  - **Analytics**: Track which languages are most commonly translated
+  - **Permissions Required**: Manage Server
 - `/translate-disable <channel>` - Disable auto-translation for a channel
   - `channel` (required): Channel to disable auto-translation in
   - **Permissions Required**: Manage Server
 - `/translate-list` - View all channels with auto-translation enabled
-  - Shows current translation settings (display mode, target language)
+  - Shows current translation settings (display mode, target languages, output channel)
   - Lists all enabled channels
   - **Permissions Required**: Manage Server
 - `/translate-status` - View current translation settings
-  - Shows display mode and target language
+  - Shows display mode, target languages, and output channel
   - Lists all channels with auto-translation enabled
   - **Permissions Required**: Manage Server
 
 **Translation Features:**
 
-- 🌐 **Auto-Translation**: Automatically detects and translates non-English messages in configured channels
+- 🌐 **Auto-Translation**: Automatically detects and translates messages in configured channels
 - 🎨 **Customizable Display**: Choose between reply, embed, or thread format
 - 🔧 **Per-Channel Configuration**: Enable translation only in specific channels
+- 📍 **Output Channel Redirect**: Send all translations to a dedicated channel
+- 🗣️ **Multi-Language Support**: Translate to multiple languages simultaneously
+- 🎯 **Translation Reactions**: Original messages get flag emoji reactions showing detected language
+- 📊 **Analytics**: Track translation statistics (total, language pairs, active channels)
 - 💬 **Manual Translation**: Use `/translate` anywhere (servers, DMs, group DMs)
 - 🆓 **Free Service**: Powered by Google Translate with no API key required
-- 🗣️ **100+ Languages**: Supports all major languages
+- 🌍 **100+ Languages**: Supports all major languages
 
 ### Logging & Monitoring Commands
 

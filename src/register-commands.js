@@ -905,11 +905,43 @@ const commands = [
       .addChannelOption((option) =>
         option
           .setName("channel")
-          .setDescription(
-            "Channel to send translations to (leave empty to disable)"
-          )
+          .setDescription("Channel to send translations to")
           .setRequired(true)
       )
+  ),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("translate-clear-output")
+      .setDescription(
+        "Clear the output channel (translations return to source channels)"
+      )
+  ),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("translate-add-language")
+      .setDescription("Add a target language for translation")
+      .addStringOption((option) =>
+        option
+          .setName("language")
+          .setDescription("Language code to add (e.g., en, es, de, fr, ja)")
+          .setRequired(true)
+      )
+  ),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("translate-remove-language")
+      .setDescription("Remove a target language from translation")
+      .addStringOption((option) =>
+        option
+          .setName("language")
+          .setDescription("Language code to remove (e.g., en, es, de, fr, ja)")
+          .setRequired(true)
+      )
+  ),
+  makeGuildOnly(
+    new SlashCommandBuilder()
+      .setName("translate-stats")
+      .setDescription("View translation statistics for this server")
   ),
   makeGuildOnly(
     new SlashCommandBuilder()
