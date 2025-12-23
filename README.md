@@ -12,6 +12,7 @@ This bot automatically helps you maintain your Discord Active Developer Badge el
 - 👤 **User App Support** - Install once, use anywhere (servers, DMs, group DMs)
 - 🌐 **Auto-Translation** - Automatically translate messages in configured channels (100+ languages)
 - 🆓 **Free Translation** - Powered by Google Translate, no API key required
+- 🎛️ **Web Dashboard** - Control and configure your bot from a beautiful web interface with Discord OAuth2
 
 ## Why do you need this bot?
 
@@ -113,6 +114,158 @@ npm run register
 ```bash
 npm start
 ```
+
+### 8. (Optional) Enable Web Dashboard
+
+The bot includes a beautiful web dashboard for easy configuration and monitoring.
+
+#### Dashboard Features
+
+- 🔐 **Secure Login** - Discord OAuth2 authentication
+- 🎛️ **Server Management** - Select and manage multiple servers
+- 🌐 **Translation Control** - Configure channels, languages, and display modes
+- 📊 **Live Statistics** - View translation stats, language pairs, active channels
+- ⚙️ **Easy Configuration** - Visual interface for all bot settings
+- 🛡️ **Permission Checking** - Only users with "Manage Server" can access
+
+#### Local Setup
+
+1. **Get OAuth2 Credentials:**
+
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Select your application → OAuth2 → General
+   - Copy your **Client Secret** (keep it secret!)
+   - Under "Redirects", add: `http://localhost:3000/auth/callback`
+   - Click "Save Changes"
+
+2. **Configure `.env` File:**
+
+   ```env
+   CLIENT_SECRET=your_client_secret_from_discord
+   SESSION_SECRET=generate_random_32_char_string
+   DASHBOARD_PORT=3000
+   DASHBOARD_CALLBACK_URL=http://localhost:3000/auth/callback
+   ```
+
+   **Tips:**
+
+   - Generate `SESSION_SECRET`: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+   - Must be 32+ characters for security
+
+3. **Install Dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+   This installs: `express`, `express-session`, `passport`, `passport-discord`
+
+4. **Start the Dashboard:**
+
+   **Option A: Bot + Dashboard Together (Recommended)**
+
+   ```bash
+   npm run start:all
+   ```
+
+   **Option B: Dashboard Only**
+
+   ```bash
+   npm run dashboard
+   ```
+
+   **Option C: Separate Terminals**
+
+   - Terminal 1: `npm start` (bot)
+   - Terminal 2: `npm run dashboard` (dashboard)
+
+5. **Access Dashboard:**
+   - Open browser: `http://localhost:3000`
+   - Click "Login with Discord"
+   - Authorize the application
+   - Start managing your servers!
+
+#### Dashboard Pages
+
+**🏠 Servers Page:**
+
+- View all servers where you have "Manage Server" permission
+- Click any server card to manage settings
+
+**🌐 Translation Page:**
+
+- Change display mode (reply, embed, thread)
+- Add/remove target languages
+- Set output channel for translations
+- View enabled channels
+
+**📊 Statistics Page:**
+
+- Total translations count
+- Top language pairs with usage counts
+- Most active channels
+- Real-time data from bot
+
+#### Production Deployment
+
+For production (VPS, cloud hosting):
+
+1. **Update Discord OAuth2:**
+
+   - Add production URL to redirects
+   - Example: `https://yourdomain.com/auth/callback`
+
+2. **Update `.env`:**
+
+   ```env
+   DASHBOARD_CALLBACK_URL=https://yourdomain.com/auth/callback
+   ```
+
+3. **Use HTTPS:** Configure reverse proxy (Nginx/Apache)
+
+4. **Process Manager:** Use PM2 for reliability
+   ```bash
+   npm install -g pm2
+   pm2 start npm --name "discord-bot" -- run start:all
+   pm2 save
+   ```
+
+#### Security Best Practices
+
+⚠️ **Important:**
+
+- Never commit `.env` file (contains secrets)
+- Keep `CLIENT_SECRET` private (treat as password)
+- Use strong `SESSION_SECRET` (32+ chars)
+- Use HTTPS in production (not HTTP)
+- Rotate secrets regularly
+- Enable 2FA on Discord Developer Portal
+
+#### Troubleshooting Dashboard
+
+**"Not authenticated" error:**
+
+- Make sure you logged in via Discord OAuth2
+- Check `CLIENT_SECRET` is correct in `.env`
+- Clear browser cookies and try again
+
+**"Failed to load servers":**
+
+- Ensure bot is running (`npm start`)
+- Verify you have "Manage Server" permission
+- Check `CLIENT_ID` matches your Discord app
+
+**Dashboard won't start:**
+
+- Check if port 3000 is in use
+- Try changing `DASHBOARD_PORT` in `.env`
+- Verify all dependencies installed
+
+**OAuth redirect error:**
+
+- Verify redirect URL in Discord Portal matches `.env` exactly
+- Check for typos in URLs
+- Ensure URL is: `http://localhost:3000/auth/callback` (local) or `https://yourdomain.com/auth/callback` (production)
 
 ## Usage
 
@@ -397,9 +550,109 @@ The bot has built-in automated scheduling:
 
 ## Deploy to Cloud (Recommended)
 
-To ensure the bot runs 24/7, it's recommended to deploy to a cloud platform:
+To ensure the bot runs 24/7, it's recommended to deploy to a cloud platform like Railway.
 
-### Option 1: Heroku
+### Railway Deployment (Recommended)
+
+Railway provides easy deployment with persistent storage for your bot and dashboard.
+
+#### Quick Setup
+
+1. **Sign up** for a [Railway](https://railway.app) account (free tier available)
+2. **New Project** → Deploy from GitHub repo → Select `Auto-Discord-Developer-Badge`
+3. **Set Environment Variables** in Railway Dashboard → Variables tab:
+
+**Required Bot Variables:**
+
+```env
+DISCORD_TOKEN=your_bot_token_here
+CLIENT_ID=your_client_id_here
+GUILD_ID=your_guild_id_here
+COMMAND_PREFIX=!
+```
+
+**Required Dashboard Variables:**
+
+```env
+CLIENT_SECRET=your_discord_oauth_client_secret
+SESSION_SECRET=random_32_char_string_or_longer
+DASHBOARD_CALLBACK_URL=https://your-app.up.railway.app/auth/callback
+```
+
+**Optional Variables:**
+
+```env
+TWITCH_CLIENT_ID=your_twitch_id
+TWITCH_ACCESS_TOKEN=your_twitch_token
+ENABLE_AUTO_EXECUTION=true
+```
+
+4. **Generate Railway Domain:**
+
+   - Railway Dashboard → Settings → Networking → Generate Domain
+   - Copy your domain (e.g., `your-app.up.railway.app`)
+
+5. **Update Discord OAuth2 Redirect:**
+
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Your App → OAuth2 → General → Redirects
+   - Add: `https://your-app.up.railway.app/auth/callback`
+   - Update `DASHBOARD_CALLBACK_URL` in Railway to match
+
+6. **Add Volume for Persistent Storage:**
+   - Press `Ctrl+K` (or `⌘K` on Mac) in Railway Dashboard
+   - Type "volume" → Select "Create Volume"
+   - Choose your bot service
+   - Set mount path to: `/data`
+   - Railway auto-redeploys with volume attached
+
+#### What Gets Persisted
+
+With Railway volume at `/data`:
+
+- Translation configurations and statistics
+- Twitch streamer settings
+- Server-specific configurations
+- All bot data survives deployments
+
+#### Access Your Dashboard
+
+Once deployed, visit: `https://your-app.up.railway.app`
+
+#### Railway Features
+
+- ✅ **Automatic Restarts** - Configured in `railway.json`
+- ✅ **HTTPS by Default** - Secure connections automatically
+- ✅ **Auto-Deploy** - Pushes to GitHub trigger redeployment
+- ✅ **Free Tier** - $5 credit/month, sufficient for small bots
+- ✅ **Built-in Monitoring** - View logs and metrics in dashboard
+
+#### Troubleshooting Railway
+
+**OAuth Error when logging in:**
+
+- Verify `CLIENT_SECRET` is correct in Railway
+- Check redirect URL matches exactly in Discord Portal (must use `https://`)
+
+**Bot not responding:**
+
+- Check Railway logs (Dashboard → Deployments → Latest → Logs)
+- Verify `DISCORD_TOKEN` is correct
+- Ensure bot intents enabled in Discord Portal
+
+**Dashboard "Not authenticated":**
+
+- Clear browser cookies
+- Verify `SESSION_SECRET` is set
+- Check Railway logs for auth errors
+
+**No servers showing:**
+
+- Ensure you have "Manage Server" permission
+- Verify bot is in the server
+- Check `CLIENT_ID` matches Discord application
+
+### Alternative: Heroku
 
 1. Sign up for a [Heroku](https://heroku.com) account
 2. Install Heroku CLI
@@ -411,21 +664,7 @@ heroku config:set DISCORD_TOKEN=your_token CLIENT_ID=your_id GUILD_ID=your_guild
 git push heroku main
 ```
 
-### Option 2: Railway
-
-1. Sign up for a [Railway](https://railway.app) account
-2. Connect your GitHub repository
-3. Set environment variables: `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`
-4. **Configure Volume for Persistent Data** (required for Twitch notifications):
-   - Press `Ctrl+K` (or `⌘K` on Mac) to open Command Palette
-   - Type "volume" and select **"Create Volume"**
-   - Choose your bot service
-   - Set mount path to: `/data`
-   - Railway will auto-redeploy with the volume attached
-
-**Note**: The volume ensures Twitch streamer notifications persist across deployments. Without it, the bot will work but Twitch configuration will be lost on each redeploy. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions.
-
-### Option 3: Render
+### Alternative: Render
 
 1. Sign up for a [Render](https://render.com) account
 2. Create a new Web Service

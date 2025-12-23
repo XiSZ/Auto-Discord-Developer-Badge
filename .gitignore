@@ -3,3 +3,8 @@ node_modules/
 .DS_Store
 .env
 invite-bot.html
+data/
+*.sqlite
+*.db
+sessions/
+.vscode/settings.json

@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "npm run generate-guide && node src/index.js",
+    "dashboard": "node src/dashboard.js",
+    "start:all": "npm run generate-guide && node src/start-all.js",
     "register": "node src/register-commands.js",
     "dev": "node --watch src/index.js",
     "generate-guide": "node src/generate-guide.js",
@@ -24,6 +26,10 @@
     "axios": "^1.13.2",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
-    "emoji-regex": "^10.6.0"
+    "emoji-regex": "^10.6.0",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4"
   }
 }

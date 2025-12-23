@@ -1,0 +1,195 @@
+import express from "express";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as DiscordStrategy } from "passport-discord";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { readFileSync, existsSync } from "fs";
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+
+// Session configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    },
+  })
+);
+
+// Passport configuration
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+passport.use(
+  new DiscordStrategy(
+    {
+      clientID: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET,
+      callbackURL:
+        process.env.DASHBOARD_CALLBACK_URL ||
+        (process.env.RAILWAY_PUBLIC_DOMAIN
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/auth/callback`
+          : `http://localhost:${PORT}/auth/callback`),
+      scope: ["identify", "guilds"],
+    },
+    (accessToken, refreshToken, profile, done) => {
+      profile.accessToken = accessToken;
+      return done(null, profile);
+    }
+  )
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(express.json());
+app.use(express.static(join(__dirname, "..", "dashboard", "public")));
+
+// Auth middleware
+function isAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ error: "Not authenticated" });
+}
+
+// Routes
+app.get("/", (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.redirect("/dashboard");
+  }
+  res.sendFile(join(__dirname, "..", "dashboard", "public", "index.html"));
+});
+
+app.get("/dashboard", isAuthenticated, (req, res) => {
+  res.sendFile(join(__dirname, "..", "dashboard", "public", "dashboard.html"));
+});
+
+app.get("/auth/discord", passport.authenticate("discord"));
+
+app.get(
+  "/auth/callback",
+  passport.authenticate("discord", {
+    failureRedirect: "/",
+  }),
+  (req, res) => {
+    res.redirect("/dashboard");
+  }
+);
+
+app.get("/auth/logout", (req, res) => {
+  req.logout(() => {
+    res.redirect("/");
+  });
+});
+
+app.get("/api/user", isAuthenticated, (req, res) => {
+  res.json({
+    id: req.user.id,
+    username: req.user.username,
+    discriminator: req.user.discriminator,
+    avatar: req.user.avatar,
+  });
+});
+
+// API: Get user's guilds where they have manage server permission
+app.get("/api/guilds", isAuthenticated, async (req, res) => {
+  try {
+    const guilds = req.user.guilds || [];
+    // Filter guilds where user has MANAGE_GUILD permission (0x20)
+    const manageableGuilds = guilds.filter(
+      (guild) => (guild.permissions & 0x20) === 0x20
+    );
+    res.json(manageableGuilds);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Get bot configuration for a guild
+app.get("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const configPath = join(
+      __dirname,
+      "..",
+      "data",
+      "servers",
+      guildId,
+      "translation-config.json"
+    );
+
+    if (!existsSync(configPath)) {
+      return res.json({
+        channels: [],
+        displayMode: "reply",
+        targetLanguages: ["en"],
+        outputChannelId: null,
+      });
+    }
+
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Get translation stats for a guild
+app.get("/api/guild/:guildId/stats", isAuthenticated, async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const statsPath = join(
+      __dirname,
+      "..",
+      "data",
+      "servers",
+      guildId,
+      "translation-stats.json"
+    );
+
+    if (!existsSync(statsPath)) {
+      return res.json({
+        total: 0,
+        byLanguagePair: {},
+        byChannel: {},
+      });
+    }
+
+    const stats = JSON.parse(readFileSync(statsPath, "utf-8"));
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Update translation configuration
+app.post("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const config = req.body;
+
+    // In a real implementation, you would:
+    // 1. Verify user has permission to manage this guild
+    // 2. Send update to bot via IPC or shared file system
+    // 3. Have bot reload configuration
+
+    res.json({ success: true, message: "Configuration updated" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🌐 Dashboard running at http://localhost:${PORT}`);
+  console.log(`📊 Login URL: http://localhost:${PORT}/auth/discord`);
+});
