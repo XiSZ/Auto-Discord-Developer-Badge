@@ -510,7 +510,10 @@ app.post(
         ignoredChannels: Array.isArray(ignoredChannels)
           ? Array.from(new Set(ignoredChannels.filter(Boolean)))
           : [],
-        events: typeof events === "object" && events !== null ? events : current.events || {},
+        events:
+          typeof events === "object" && events !== null
+            ? events
+            : current.events || {},
       };
       writeJSON(configPath, next);
       res.json({ success: true, message: "Tracking configuration saved." });
@@ -527,7 +530,9 @@ app.post("/api/tracking/reload", isAuthenticated, async (req, res) => {
       `http://127.0.0.1:${CONTROL_PORT}/control/reload-tracking`,
       {
         method: "POST",
-        headers: CONTROL_TOKEN ? { "x-control-token": CONTROL_TOKEN } : undefined,
+        headers: CONTROL_TOKEN
+          ? { "x-control-token": CONTROL_TOKEN }
+          : undefined,
       }
     );
     const data = await r.json().catch(() => ({}));

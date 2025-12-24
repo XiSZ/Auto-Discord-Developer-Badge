@@ -1136,13 +1136,19 @@ async function loadTrackingContent() {
     const channels = Array.isArray(chans.channels) ? chans.channels : [];
     const selected = cfg.channelId || "";
     const enabled = !!cfg.enabled;
-    const ignored = Array.isArray(cfg.ignoredChannels) ? cfg.ignoredChannels : [];
-    const events = typeof cfg.events === "object" && cfg.events !== null ? cfg.events : {};
+    const ignored = Array.isArray(cfg.ignoredChannels)
+      ? cfg.ignoredChannels
+      : [];
+    const events =
+      typeof cfg.events === "object" && cfg.events !== null ? cfg.events : {};
 
     const channelOptions = [
       `<option value="">Select a channel...</option>`,
       ...channels.map(
-        (c) => `<option value="${c.id}" ${selected === c.id ? "selected" : ""}>#${c.name}</option>`
+        (c) =>
+          `<option value="${c.id}" ${selected === c.id ? "selected" : ""}>#${
+            c.name
+          }</option>`
       ),
     ].join("");
 
@@ -1176,14 +1182,21 @@ async function loadTrackingContent() {
           const id = `evt_${key}`;
           return `
             <div class="form-check form-switch col-md-4 mb-2">
-              <input class="form-check-input" type="checkbox" id="${id}" ${checked ? "checked" : ""} onchange="toggleTrackingEvent('${key}', this.checked)">
+              <input class="form-check-input" type="checkbox" id="${id}" ${
+            checked ? "checked" : ""
+          } onchange="toggleTrackingEvent('${key}', this.checked)">
               <label class="form-check-label" for="${id}">${label}</label>
             </div>`;
         })
         .join("");
     }
 
-    window._trackingState = { enabled, selected, ignored: [...ignored], events: { ...events } };
+    window._trackingState = {
+      enabled,
+      selected,
+      ignored: [...ignored],
+      events: { ...events },
+    };
 
     content.innerHTML = `
       <div class="row">
@@ -1197,7 +1210,9 @@ async function loadTrackingContent() {
                 <small class="text-muted d-block">Toggle tracking for this server</small>
               </div>
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="trackingEnabled" ${enabled ? "checked" : ""}>
+                <input class="form-check-input" type="checkbox" id="trackingEnabled" ${
+                  enabled ? "checked" : ""
+                }>
               </div>
             </div>
             <div class="mb-3">
@@ -1227,7 +1242,9 @@ async function loadTrackingContent() {
                 <span class="input-group-text"><i class="bi bi-hash"></i></span>
                 <select class="form-select" id="ignoredChannelPicker">
                   <option value="">Select a channel...</option>
-                  ${channels.map((c) => `<option value="${c.id}">#${c.name}</option>`).join("")}
+                  ${channels
+                    .map((c) => `<option value="${c.id}">#${c.name}</option>`)
+                    .join("")}
                 </select>
                 <button class="btn btn-primary" onclick="addIgnoredChannelFromDropdown()"><i class="bi bi-plus"></i> Add</button>
               </div>
@@ -1260,26 +1277,33 @@ async function loadTrackingContent() {
 function renderIgnoredChannels() {
   const list = document.getElementById("ignoredChannelsList");
   if (!list) return;
-  const items = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  const items = Array.isArray(window._trackingState?.ignored)
+    ? window._trackingState.ignored
+    : [];
   if (items.length === 0) {
-    list.innerHTML = '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No ignored channels</div>';
+    list.innerHTML =
+      '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No ignored channels</div>';
     return;
   }
-  list.innerHTML = items.map((id) => {
-    const name = channelDisplayName(id);
-    return `
+  list.innerHTML = items
+    .map((id) => {
+      const name = channelDisplayName(id);
+      return `
       <div class="channel-toggle" data-channel-id="${id}">
         <div><i class="bi bi-slash-circle text-muted me-1"></i> <strong>${name}</strong> <small class="text-muted">(${id})</small></div>
         <button class="btn btn-sm btn-outline-danger" onclick="removeIgnoredChannel('${id}')"><i class="bi bi-trash"></i></button>
       </div>`;
-  }).join("");
+    })
+    .join("");
 }
 
 function addIgnoredChannelFromDropdown() {
   const dd = document.getElementById("ignoredChannelPicker");
   const channelId = dd?.value;
   if (!channelId) return alert("Please select a channel");
-  const cur = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  const cur = Array.isArray(window._trackingState?.ignored)
+    ? window._trackingState.ignored
+    : [];
   if (!cur.includes(channelId)) {
     window._trackingState.ignored = [...cur, channelId];
     renderIgnoredChannels();
@@ -1287,7 +1311,9 @@ function addIgnoredChannelFromDropdown() {
 }
 
 function removeIgnoredChannel(channelId) {
-  const cur = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  const cur = Array.isArray(window._trackingState?.ignored)
+    ? window._trackingState.ignored
+    : [];
   window._trackingState.ignored = cur.filter((c) => c !== channelId);
   renderIgnoredChannels();
 }
@@ -1302,8 +1328,13 @@ async function saveTrackingConfig() {
   try {
     const enabled = !!document.getElementById("trackingEnabled")?.checked;
     const channelId = document.getElementById("trackingChannel")?.value || null;
-    const ignoredChannels = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
-    const events = typeof window._trackingState?.events === "object" ? window._trackingState.events : {};
+    const ignoredChannels = Array.isArray(window._trackingState?.ignored)
+      ? window._trackingState.ignored
+      : [];
+    const events =
+      typeof window._trackingState?.events === "object"
+        ? window._trackingState.events
+        : {};
     const r = await fetch(`/api/guild/${currentGuildId}/tracking-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1313,7 +1344,9 @@ async function saveTrackingConfig() {
     if (!r.ok) throw new Error(data.error || "Failed to save tracking config");
     const success = document.createElement("div");
     success.className = "alert alert-success mt-3";
-    success.innerHTML = `<i class="bi bi-check-circle"></i> ${data.message || 'Saved.'}`;
+    success.innerHTML = `<i class="bi bi-check-circle"></i> ${
+      data.message || "Saved."
+    }`;
     document.getElementById("trackingContent").prepend(success);
     setTimeout(() => success.remove(), 4000);
   } catch (e) {
@@ -1327,7 +1360,8 @@ async function reloadTrackingConfigNow() {
     if (!r.ok) throw new Error((await r.json()).error || "Failed to reload");
     const a = document.createElement("div");
     a.className = "alert alert-success mt-3";
-    a.innerHTML = '<i class="bi bi-check-circle"></i> Reloaded Tracking configuration.';
+    a.innerHTML =
+      '<i class="bi bi-check-circle"></i> Reloaded Tracking configuration.';
     document.getElementById("trackingContent").prepend(a);
     setTimeout(() => a.remove(), 3000);
   } catch (e) {
