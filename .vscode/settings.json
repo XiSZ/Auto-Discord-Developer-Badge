@@ -1,3 +1,7 @@
 {
-  "window.title": "${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}${separator}[Branch: main]"
+  "window.title": "${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}${separator}[Branch: main]",
+  "git.enableSmartCommit": true,
+  "git.postCommitCommand": "push",
+  "git.confirmSync": false,
+  "git.suggestSmartCommit": false
 }

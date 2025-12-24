@@ -13,10 +13,16 @@ async function fetchJSON(url, options = {}, timeoutMs = 15000) {
     const res = await fetch(url, { ...options, signal: controller.signal });
     const text = await res.text();
     let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (_) {
+      data = { raw: text };
+    }
     if (!res.ok) {
       const err = new Error(data?.error || res.statusText || "Request failed");
-      err.status = res.status; err.data = data; throw err;
+      err.status = res.status;
+      err.data = data;
+      throw err;
     }
     return data;
   } finally {
@@ -33,7 +39,9 @@ async function checkAuth() {
       return false;
     }
     const user = await response.json();
-    document.getElementById("userInfo").textContent = `${user.username}#${user.discriminator}`;
+    document.getElementById(
+      "userInfo"
+    ).textContent = `${user.username}#${user.discriminator}`;
     return true;
   } catch (error) {
     console.error("Auth error:", error);
@@ -55,7 +63,7 @@ async function loadGuilds() {
   }
   try {
     const data = await fetchJSON("/api/guilds");
-    guilds = Array.isArray(data) ? data : (data.guilds || []);
+    guilds = Array.isArray(data) ? data : data.guilds || [];
 
     if (!guilds || guilds.length === 0) {
       if (container) {
@@ -68,21 +76,27 @@ async function loadGuilds() {
       return;
     }
 
-    const html = guilds.map((guild) => {
-      const iconUrl = guild.icon
-        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-        : "https://cdn.discordapp.com/embed/avatars/0.png";
-      return `
+    const html = guilds
+      .map((guild) => {
+        const iconUrl = guild.icon
+          ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+          : "https://cdn.discordapp.com/embed/avatars/0.png";
+        return `
         <div class="col-md-4 col-lg-3 mb-3">
-          <div class="server-card card h-100" onclick="selectGuild('${guild.id}', '${guild.name.replace(/'/g, "\\'")}')">
+          <div class="server-card card h-100" onclick="selectGuild('${
+            guild.id
+          }', '${guild.name.replace(/'/g, "\\'")}')">
             <div class="card-body text-center">
-              <img src="${iconUrl}" alt="${guild.name}" class="rounded-circle mb-3" width="80" height="80">
+              <img src="${iconUrl}" alt="${
+          guild.name
+        }" class="rounded-circle mb-3" width="80" height="80">
               <h6 class="card-title">${guild.name}</h6>
               <small class="text-muted">Click to manage</small>
             </div>
           </div>
         </div>`;
-    }).join("");
+      })
+      .join("");
     if (container) container.innerHTML = html;
   } catch (error) {
     if (container) {
@@ -997,7 +1011,10 @@ async function loadTwitchContent() {
     const channelOptions = [
       `<option value="">Select a channel...</option>`,
       ...channels.map(
-        (c) => `<option value="${c.id}" ${selected === c.id ? "selected" : ""}>#${c.name}</option>`
+        (c) =>
+          `<option value="${c.id}" ${selected === c.id ? "selected" : ""}>#${
+            c.name
+          }</option>`
       ),
     ].join("");
 
@@ -1061,14 +1078,16 @@ async function loadTwitchContent() {
 }
 
 function renderStreamerList() {
-        <p class="text-muted">${error.message || 'Unknown error'}</p>
-        ${error.status === 401 ? '<p class="text-muted">Your session may have expired. Please log in again.</p>' : ''}
+  const list = document.getElementById("twitchStreamersList");
   const badge = document.getElementById("twitchStreamersCount");
-  const streamers = Array.isArray(window._twitchStreamers) ? window._twitchStreamers : [];
+  const streamers = Array.isArray(window._twitchStreamers)
+    ? window._twitchStreamers
+    : [];
   if (badge) badge.textContent = streamers.length;
   if (!list) return;
   if (streamers.length === 0) {
-    list.innerHTML = '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No streamers monitored</div>';
+    list.innerHTML =
+      '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No streamers monitored</div>';
     return;
   }
   list.innerHTML = streamers
@@ -1088,22 +1107,31 @@ function addStreamer() {
   const raw = (input.value || "").trim();
   const username = raw.toLowerCase();
   if (!username) return alert("Please enter a Twitch username");
-  if (!/^\w{3,25}$/.test(username)) return alert("Invalid username. Use 3-25 letters, numbers, or underscores.");
-  window._twitchStreamers = Array.from(new Set([...(window._twitchStreamers || []), username]));
+  if (!/^\w{3,25}$/.test(username))
+    return alert(
+      "Invalid username. Use 3-25 letters, numbers, or underscores."
+    );
+  window._twitchStreamers = Array.from(
+    new Set([...(window._twitchStreamers || []), username])
+  );
   input.value = "";
   renderStreamerList();
 }
 
 function removeStreamer(name) {
   if (!confirm(`Remove streamer ${name}?`)) return;
-  window._twitchStreamers = (window._twitchStreamers || []).filter((s) => s !== name);
+  window._twitchStreamers = (window._twitchStreamers || []).filter(
+    (s) => s !== name
+  );
   renderStreamerList();
 }
 
 async function saveTwitchConfig() {
   try {
     const channelId = document.getElementById("twitchChannel")?.value || null;
-    const streamers = Array.isArray(window._twitchStreamers) ? window._twitchStreamers : [];
+    const streamers = Array.isArray(window._twitchStreamers)
+      ? window._twitchStreamers
+      : [];
     const r = await fetch(`/api/guild/${currentGuildId}/twitch-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1113,7 +1141,9 @@ async function saveTwitchConfig() {
     if (!r.ok) throw new Error(data.error || "Failed to save Twitch config");
     const success = document.createElement("div");
     success.className = "alert alert-success mt-3";
-    success.innerHTML = `<i class="bi bi-check-circle"></i> ${data.message || 'Saved.'}`;
+    success.innerHTML = `<i class="bi bi-check-circle"></i> ${
+      data.message || "Saved."
+    }`;
     document.getElementById("twitchContent").prepend(success);
     setTimeout(() => success.remove(), 4000);
   } catch (e) {
@@ -1127,7 +1157,8 @@ async function reloadTwitchConfigNow() {
     if (!r.ok) throw new Error((await r.json()).error || "Failed to reload");
     const a = document.createElement("div");
     a.className = "alert alert-success mt-3";
-    a.innerHTML = '<i class="bi bi-check-circle"></i> Reloaded Twitch configuration.';
+    a.innerHTML =
+      '<i class="bi bi-check-circle"></i> Reloaded Twitch configuration.';
     document.getElementById("twitchContent").prepend(a);
     setTimeout(() => a.remove(), 3000);
   } catch (e) {
@@ -1138,10 +1169,12 @@ async function reloadTwitchConfigNow() {
 async function checkTwitchNow() {
   try {
     const r = await fetch(`/api/twitch/check`, { method: "POST" });
-    if (!r.ok) throw new Error((await r.json()).error || "Failed to trigger check");
+    if (!r.ok)
+      throw new Error((await r.json()).error || "Failed to trigger check");
     const a = document.createElement("div");
     a.className = "alert alert-success mt-3";
-    a.innerHTML = '<i class="bi bi-check-circle"></i> Triggered immediate Twitch check.';
+    a.innerHTML =
+      '<i class="bi bi-check-circle"></i> Triggered immediate Twitch check.';
     document.getElementById("twitchContent").prepend(a);
     setTimeout(() => a.remove(), 3000);
   } catch (e) {
@@ -1235,7 +1268,11 @@ async function reloadCommands() {
     const list = document.getElementById("commandsList");
     if (list)
       list.innerHTML = '<div class="text-muted">Loading commands...</div>';
-    const r = await fetch("/api/commands");
+    const r = await fetch(
+      currentGuildId
+        ? `/api/commands?guildId=${currentGuildId}`
+        : "/api/commands"
+    );
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed to fetch commands");
     renderCommandsList(data.commands || []);
@@ -1316,7 +1353,11 @@ async function deleteCommand(id, scope) {
     const r = await fetch("/api/commands/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commandId: id, scope, guildId: scope === 'guild' ? currentGuildId : undefined }),
+      body: JSON.stringify({
+        commandId: id,
+        scope,
+        guildId: scope === "guild" ? currentGuildId : undefined,
+      }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Delete failed");
