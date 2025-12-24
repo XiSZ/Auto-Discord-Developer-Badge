@@ -263,9 +263,24 @@ app.post("/api/badge/settings", isAuthenticated, (req, res) => {
 app.get("/api/guilds", isAuthenticated, async (req, res) => {
   try {
     const guilds = req.user.guilds || [];
+    console.log(
+      `[API] User has access to ${guilds.length} total guilds from OAuth`
+    );
+    console.log(
+      `[API] OAuth guild IDs: ${guilds.map((g) => g.id).join(", ") || "none"}`
+    );
+
     // Filter guilds where user has MANAGE_GUILD permission (0x20)
     const manageableGuilds = guilds.filter(
       (guild) => (guild.permissions & 0x20) === 0x20
+    );
+    console.log(
+      `[API] User has MANAGE_GUILD in ${manageableGuilds.length} guilds`
+    );
+    console.log(
+      `[API] Manageable guild IDs: ${
+        manageableGuilds.map((g) => g.id).join(", ") || "none"
+      }`
     );
 
     // Get bot guilds from control API
@@ -289,10 +304,16 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
     );
 
     // Check which guilds the bot is in
-    const guildsWithBotStatus = manageableGuilds.map((guild) => ({
-      ...guild,
-      botJoined: botGuildIds.has(guild.id),
-    }));
+    const guildsWithBotStatus = manageableGuilds.map((guild) => {
+      const botJoined = botGuildIds.has(guild.id);
+      console.log(
+        `[API] Guild ${guild.id}: botJoined=${botJoined}, name=${guild.name}`
+      );
+      return {
+        ...guild,
+        botJoined,
+      };
+    });
 
     res.json(guildsWithBotStatus);
   } catch (error) {
