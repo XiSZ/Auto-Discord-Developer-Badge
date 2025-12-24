@@ -44,8 +44,8 @@ const client = new Client({
   ],
 });
 
-// Command prefix (can be customized via .env file)
-const PREFIX = process.env.COMMAND_PREFIX || "!";
+// Command prefix (can be customized via .env file or runtime)
+let PREFIX = process.env.COMMAND_PREFIX || "!";
 
 // Auto-execution interval (overridden by env/dashboard, clamped 1-60 days)
 const DEFAULT_AUTO_EXECUTION_DAYS = 30;
@@ -109,6 +109,7 @@ const DATA_DIR =
 const SERVERS_DIR = join(DATA_DIR, "servers");
 const BADGE_SETTINGS_PATH = join(DATA_DIR, "badge-settings.json");
 const DISABLED_COMMANDS_PATH = join(DATA_DIR, "disabled-commands.json");
+const PREFIX_PATH = join(DATA_DIR, "prefix.json");
 
 // Ensure data directory exists
 if (!fileOps.exists(DATA_DIR)) {
@@ -119,6 +120,9 @@ if (!fileOps.exists(DATA_DIR)) {
     logger.error(`Failed to create data directory: ${error.message}`);
   }
 }
+
+// Load prefix from disk (overrides env if present)
+loadPrefix(false);
 
 // Ensure servers directory exists
 if (!fileOps.exists(SERVERS_DIR)) {
@@ -239,6 +243,15 @@ function startControlApi() {
     try {
       loadDisabledCommands();
       res.json({ success: true, disabledCount: disabledCommands.size });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/control/reload-prefix", checkAuth, (req, res) => {
+    try {
+      const value = loadPrefix(true);
+      res.json({ success: true, prefix: value });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -448,6 +461,43 @@ function loadTwitchData(suppressLog = false) {
   } catch (error) {
     logger.error(`Error loading Twitch data: ${error.message}`);
   }
+}
+
+// Load prefix from disk; fallback to env/default
+function loadPrefix(log = true) {
+  try {
+    if (fileOps.exists(PREFIX_PATH)) {
+      const data = fileOps.readJSON(PREFIX_PATH);
+      const next = typeof data?.prefix === "string" ? data.prefix.trim() : "";
+      if (next) {
+        PREFIX = next;
+        if (log) logger.info(`Prefix set to "${PREFIX}" from disk`);
+        return PREFIX;
+      }
+    }
+  } catch (e) {
+    logger.warn(`Failed to load prefix: ${e.message}`);
+  }
+  return PREFIX;
+}
+
+function savePrefix(newPrefix) {
+  const trimmed = (newPrefix || "").trim();
+  if (!trimmed) throw new Error("Prefix cannot be empty");
+  if (trimmed.length > 5)
+    throw new Error("Prefix must be 5 characters or less");
+  PREFIX = trimmed;
+  try {
+    if (!fileOps.exists(DATA_DIR)) {
+      mkdirSync(DATA_DIR, { recursive: true });
+    }
+    writeFileSync(PREFIX_PATH, JSON.stringify({ prefix: PREFIX }, null, 2));
+    logger.info(`Saved prefix as "${PREFIX}"`);
+  } catch (e) {
+    logger.error(`Failed to save prefix: ${e.message}`);
+    throw e;
+  }
+  return PREFIX;
 }
 
 // Load badge settings from disk (persisted dashboard state)
@@ -1616,8 +1666,10 @@ client.once("clientReady", () => {
   // Load badge settings and disabled commands
   loadBadgeSettings();
   loadDisabledCommands();
+  loadPrefix(true);
   // Periodically refresh disabled commands to reflect dashboard changes quickly
   setInterval(loadDisabledCommands, 15000);
+  setInterval(() => loadPrefix(false), 15000);
 
   // Initialize Twitch API if credentials are available
   if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_ACCESS_TOKEN) {
@@ -1693,6 +1745,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/uptime\` 💬 – View bot uptime\n` +
         `\`/status\` 💬 – Show next auto-execution date\n` +
         `\`/dashboard\` 💬 – Get the dashboard link\n` +
+        `\`/prefix [value]\` 💬 – View or change the command prefix\n` +
         `\`/botinfo\` 💬 – Get information about the bot\n` +
         `\`/serverinfo\` – Display server information\n` +
         `\`/userinfo [user]\` 💬 – Get user details\n` +
@@ -1819,6 +1872,56 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     console.log(`✅ ${interaction.user.tag} executed uptime command`);
+  }
+
+  if (interaction.commandName === "prefix") {
+    const newPrefix = interaction.options.getString("value");
+    const inGuild = !!interaction.guild;
+
+    // Require Manage Guild in servers to change prefix
+    if (newPrefix && inGuild) {
+      const member = interaction.member;
+      if (!member?.permissions?.has("ManageGuild")) {
+        await interaction.reply({
+          content:
+            "❌ You need the Manage Server permission to change the prefix.",
+          ephemeral: true,
+        });
+        return;
+      }
+    }
+
+    if (newPrefix && !inGuild) {
+      await interaction.reply({
+        content:
+          "⚠️ Change the prefix from a server (Manage Server) or the dashboard.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!newPrefix) {
+      await interaction.reply({
+        content: `📋 Current prefix: \`${PREFIX}\`\nUse \`/prefix <new>\` to change it (Manage Server required in servers).`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      savePrefix(newPrefix);
+      await interaction.reply({
+        content: `✅ Prefix updated to \`${PREFIX}\``,
+        ephemeral: true,
+      });
+      console.log(`🔧 ${interaction.user.tag} changed prefix to ${PREFIX}`);
+    } catch (e) {
+      await interaction.reply({
+        content: `❌ Failed to update prefix: ${e.message}`,
+        ephemeral: true,
+      });
+    }
+    return;
   }
 
   if (interaction.commandName === "purge") {
@@ -4567,18 +4670,49 @@ client.on("messageCreate", async (message) => {
 
   // Prefix command: prefix (show current prefix)
   else if (command === "prefix") {
-    try {
-      await message.reply({
-        content:
-          `📋 **Current Command Prefix:** \`${PREFIX}\`\n` +
-          `\n💡 You can change this in the \`.env\` file by setting:\n` +
-          `\`\`\`\nCOMMAND_PREFIX=${PREFIX}\n\`\`\`\n` +
-          `Then restart the bot for changes to take effect.`,
-      });
+    const newPrefix = args[0];
+    const inGuild = !!message.guild;
 
-      console.log(`📋 ${message.author.tag} checked the command prefix`);
-    } catch (error) {
-      console.error("❌ Error sending prefix info:", error);
+    if (!newPrefix) {
+      try {
+        await message.reply({
+          content:
+            `📋 **Current Command Prefix:** \`${PREFIX}\`\n` +
+            `Use \`${PREFIX}prefix <newPrefix>\` to change it.`,
+        });
+
+        console.log(`📋 ${message.author.tag} checked the command prefix`);
+      } catch (error) {
+        console.error("❌ Error sending prefix info:", error);
+      }
+      return;
+    }
+
+    if (inGuild) {
+      const member = message.member;
+      if (!member?.permissions?.has?.("ManageGuild")) {
+        await message.reply(
+          '❌ You need the "Manage Server" permission to change the prefix.'
+        );
+        return;
+      }
+    } else {
+      await message.reply(
+        "⚠️ Change the prefix from a server where you have Manage Server or use the dashboard."
+      );
+      return;
+    }
+
+    try {
+      savePrefix(newPrefix);
+      await message.reply({
+        content: `✅ Prefix updated to \`${PREFIX}\``,
+      });
+      console.log(`🔧 ${message.author.tag} changed prefix to ${PREFIX}`);
+    } catch (e) {
+      await message.reply({
+        content: `❌ Failed to update prefix: ${e.message}`,
+      });
     }
   }
 

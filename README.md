@@ -105,6 +105,7 @@ DASHBOARD_CALLBACK_URL=http://localhost:3000/auth/callback
 4. **Open** `http://localhost:3000`, log in with Discord, and manage your servers.
 
 Optional: set `DASHBOARD_PUBLIC_URL` to your hosted dashboard URL so `/dashboard` shares the correct link.
+Prefix: you can change the prefix from the dashboard (Commands page) or via `/prefix <new>` / `!prefix <new>`.
 
 ### NPM Scripts Reference
 
@@ -155,7 +156,7 @@ All slash commands are registered for both guild and user-install contexts unles
 
 ### Info & Utility
 
-- `/dashboard`, `/invite`, `/serverinfo`, `/userinfo [user]`, `/avatar [user]`
+- `/dashboard`, `/prefix [value]`, `/invite`, `/serverinfo`, `/userinfo [user]`, `/avatar [user]`
 - `/say <message> [channel]`, `/poll <question> <option1> <option2> [option3-5]`, `/announce <message> [channel]`
 - `/remind <minutes> <reminder>`, `/notify <user> <message>`, `/ping-user <user> <message>`, `/echo <text>`
 - `/command-activity [days]`, `/backup`, `/config view`, `/settings view`, `/logs [lines]`, `/uptime-ranking`, `/suggest <suggestion>`

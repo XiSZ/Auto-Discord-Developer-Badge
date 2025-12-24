@@ -7,6 +7,8 @@ let channelFetchError = null;
 let userMenuOpen = false;
 let sidebarOpen = false;
 let sidebarServerMenuOpen = false;
+let commandPrefix = "!";
+const prefixInputId = "prefixInput";
 
 // Toast helper
 function showToast(message, type = "info", timeout = 3500) {
@@ -71,6 +73,47 @@ async function fetchJSON(url, options = {}, timeoutMs = 15000) {
     return data;
   } finally {
     clearTimeout(id);
+  }
+}
+
+async function loadMetaPrefix() {
+  try {
+    const res = await fetch("/api/meta");
+    const data = await res.json().catch(() => ({}));
+    if (data && data.prefix) {
+      commandPrefix = data.prefix;
+    }
+  } catch (_) {
+    commandPrefix = commandPrefix || "!";
+  } finally {
+    updatePrefixNotice();
+  }
+}
+
+async function savePrefixFromDashboard() {
+  const input = document.getElementById(prefixInputId);
+  const value = (input?.value || "").trim();
+  if (!value) {
+    alert("Prefix cannot be empty.");
+    return;
+  }
+  if (value.length > 5) {
+    alert("Prefix must be 5 characters or less.");
+    return;
+  }
+  try {
+    const r = await fetch("/api/prefix", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: value }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Failed to save prefix");
+    commandPrefix = data.prefix;
+    updatePrefixNotice();
+    alert(`Prefix updated to ${commandPrefix}`);
+  } catch (e) {
+    alert("Failed to save prefix: " + e.message);
   }
 }
 
@@ -1857,6 +1900,8 @@ async function checkTwitchNow() {
 
 // Navigation click handlers
 document.addEventListener("DOMContentLoaded", () => {
+  loadMetaPrefix();
+
   checkAuth().then((isAuth) => {
     if (isAuth) {
       loadGuilds();
@@ -1936,6 +1981,17 @@ async function saveBadgeSettings() {
 }
 
 // ===== Commands Management =====
+function updatePrefixNotice() {
+  const notice = document.getElementById("prefixNotice");
+  const value = document.getElementById("prefixValue");
+  const detail = document.getElementById("prefixDetail");
+  if (!notice) return;
+  if (value)
+    value.textContent = `${commandPrefix}help, ${commandPrefix}ping, ${commandPrefix}uptime`;
+  if (detail)
+    detail.textContent = `Prefix commands remain available: ${commandPrefix}help, ${commandPrefix}ping, ${commandPrefix}uptime, ${commandPrefix}prefix`;
+}
+
 async function reloadCommands() {
   try {
     const list = document.getElementById("commandsList");

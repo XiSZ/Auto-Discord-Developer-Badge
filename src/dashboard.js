@@ -19,6 +19,7 @@ const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 const BOT_CONTROL_PORT = Number(process.env.BOT_CONTROL_PORT || 3210);
 const CONTROL_TOKEN =
   process.env.CONTROL_TOKEN || process.env.SESSION_SECRET || "";
+const COMMAND_PREFIX = process.env.COMMAND_PREFIX || "!";
 
 console.log("[Dashboard] Starting with configuration:");
 console.log(`[Dashboard] BOT_CONTROL_PORT: ${BOT_CONTROL_PORT}`);
@@ -80,6 +81,11 @@ app.get("/api/meta", async (req, res) => {
   try {
     // Try to get bot info from control API
     let botInfo = null;
+    let storedPrefix = COMMAND_PREFIX;
+    try {
+      const data = readJSON(PREFIX_PATH, { prefix: COMMAND_PREFIX });
+      if (data?.prefix) storedPrefix = data.prefix;
+    } catch (_) {}
     try {
       botInfo = await callBotControl("/control/bot-info");
     } catch (error) {
@@ -92,6 +98,7 @@ app.get("/api/meta", async (req, res) => {
       botAvatarUrl: botInfo?.avatarUrl || process.env.BOT_AVATAR_URL || null,
       botId: botInfo?.id || null,
       botTag: botInfo?.tag || null,
+      prefix: storedPrefix,
     };
 
     res.json(response);
@@ -99,7 +106,51 @@ app.get("/api/meta", async (req, res) => {
     res.json({
       botName: process.env.BOT_NAME || "aB0T Dashboard",
       botAvatarUrl: process.env.BOT_AVATAR_URL || null,
+      prefix: (() => {
+        try {
+          const data = readJSON(PREFIX_PATH, { prefix: COMMAND_PREFIX });
+          return data?.prefix || COMMAND_PREFIX;
+        } catch (_) {
+          return COMMAND_PREFIX;
+        }
+      })(),
     });
+  }
+});
+
+// Prefix: get current value
+app.get("/api/prefix", isAuthenticated, (req, res) => {
+  try {
+    const data = readJSON(PREFIX_PATH, { prefix: COMMAND_PREFIX });
+    res.json({ prefix: data.prefix || COMMAND_PREFIX });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Prefix: update value and ask bot to reload
+app.post("/api/prefix", isAuthenticated, async (req, res) => {
+  try {
+    const { prefix } = req.body || {};
+    const next = (prefix || "").trim();
+    if (!next) return res.status(400).json({ error: "Prefix cannot be empty" });
+    if (next.length > 5)
+      return res
+        .status(400)
+        .json({ error: "Prefix must be 5 characters or less" });
+
+    ensureDir(DATA_DIR);
+    writeJSON(PREFIX_PATH, { prefix: next });
+
+    try {
+      await callBotControl("/control/reload-prefix", "POST");
+    } catch (err) {
+      console.warn("[API] Bot reload prefix failed", err.message);
+    }
+
+    res.json({ success: true, prefix: next });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -109,6 +160,7 @@ const DATA_DIR =
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const BADGE_SETTINGS_PATH = join(DATA_DIR, "badge-settings.json");
 const DISABLED_COMMANDS_PATH = join(DATA_DIR, "disabled-commands.json");
+const PREFIX_PATH = join(DATA_DIR, "prefix.json");
 
 function ensureDir(path) {
   if (!existsSync(path)) {

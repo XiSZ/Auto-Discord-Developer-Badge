@@ -1106,6 +1106,36 @@
           work in DMs when bot is installed as a User App.
         </p>
 
+        <div
+          class="alert alert-info d-flex align-items-center"
+          id="prefixNotice"
+        >
+          <i class="bi bi-hash me-2"></i>
+          <div>
+            <strong>Prefix commands:</strong>
+            <span id="prefixValue">!help, !ping, !uptime</span>
+            <div class="small text-muted" id="prefixDetail">
+              Prefix commands remain available alongside slash commands.
+            </div>
+            <div class="d-flex gap-2 mt-2 align-items-center flex-wrap">
+              <input
+                type="text"
+                id="prefixInput"
+                class="form-control form-control-sm"
+                placeholder="New prefix"
+                maxlength="5"
+                style="width: 140px"
+              />
+              <button
+                class="btn btn-sm btn-primary"
+                onclick="savePrefixFromDashboard()"
+              >
+                <i class="bi bi-save"></i> Save Prefix
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="row">
           <div class="col-md-6">
             <div class="stat-card">

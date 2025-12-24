@@ -73,6 +73,18 @@ const commands = [
       .setName("invite")
       .setDescription("Get the bot invite link")
   ),
+  // Prefix command
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("prefix")
+      .setDescription("View or change the command prefix")
+      .addStringOption((option) =>
+        option
+          .setName("value")
+          .setDescription("New prefix (max 5 characters)")
+          .setRequired(false)
+      )
+  ),
   // Dashboard link command
   makeUserInstallable(
     new SlashCommandBuilder()
@@ -304,12 +316,6 @@ const commands = [
           .setDescription("What to remind you about")
           .setRequired(true)
       )
-  ),
-  // Invite command
-  makeUserInstallable(
-    new SlashCommandBuilder()
-      .setName("invite")
-      .setDescription("Get the bot invite link")
   ),
   // Logs command
   makeGuildOnly(
