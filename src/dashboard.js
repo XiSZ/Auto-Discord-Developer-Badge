@@ -58,9 +58,6 @@ const DATA_DIR =
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const BADGE_SETTINGS_PATH = join(DATA_DIR, "badge-settings.json");
 const DISABLED_COMMANDS_PATH = join(DATA_DIR, "disabled-commands.json");
-const CONTROL_PORT = Number(process.env.BOT_CONTROL_PORT || 3210);
-const CONTROL_TOKEN =
-  process.env.CONTROL_TOKEN || process.env.SESSION_SECRET || "";
 
 function ensureDir(path) {
   if (!existsSync(path)) {
