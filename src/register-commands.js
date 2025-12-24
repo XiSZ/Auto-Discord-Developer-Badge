@@ -73,6 +73,12 @@ const commands = [
       .setName("invite")
       .setDescription("Get the bot invite link")
   ),
+  // Dashboard link command
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("dashboard")
+      .setDescription("Get the web dashboard link")
+  ),
   // Server info command
   makeGuildOnly(
     new SlashCommandBuilder()

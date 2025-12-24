@@ -359,6 +359,21 @@ function ensureServerDirectory(guildId) {
   }
 }
 
+// Build the dashboard URL from env or sensible defaults
+function getDashboardUrl() {
+  const envUrl =
+    process.env.DASHBOARD_PUBLIC_URL ||
+    process.env.DASHBOARD_URL ||
+    process.env.PUBLIC_DASHBOARD_URL ||
+    process.env.APP_URL ||
+    process.env.WEBSITE_URL;
+  if (envUrl) return envUrl;
+
+  const host = process.env.DASHBOARD_HOST || "localhost";
+  const port = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+  return `http://${host}:${port}`;
+}
+
 // Load Twitch data from all server config files
 function loadTwitchData(suppressLog = false) {
   if (!existsSync(SERVERS_DIR)) {
@@ -1677,6 +1692,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/ping\` 💬 – Check bot latency and badge status\n` +
         `\`/uptime\` 💬 – View bot uptime\n` +
         `\`/status\` 💬 – Show next auto-execution date\n` +
+        `\`/dashboard\` 💬 – Get the dashboard link\n` +
         `\`/botinfo\` 💬 – Get information about the bot\n` +
         `\`/serverinfo\` – Display server information\n` +
         `\`/userinfo [user]\` 💬 – Get user details\n` +
@@ -2540,6 +2556,28 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
     }
+  }
+
+  // Dashboard link command
+  if (interaction.commandName === "dashboard") {
+    const dashboardUrl = getDashboardUrl();
+    const note =
+      process.env.DASHBOARD_PUBLIC_URL ||
+      process.env.DASHBOARD_URL ||
+      process.env.PUBLIC_DASHBOARD_URL ||
+      process.env.APP_URL ||
+      process.env.WEBSITE_URL
+        ? ""
+        : "Tip: set DASHBOARD_PUBLIC_URL in .env for a shareable link.";
+
+    await interaction.reply({
+      content: note
+        ? `🌐 **Dashboard**\n${dashboardUrl}\n${note}`
+        : `🌐 **Dashboard**\n${dashboardUrl}`,
+      ephemeral: true,
+    });
+
+    console.log(`🌐 ${interaction.user.tag} requested the dashboard link`);
   }
 
   // Invite command
