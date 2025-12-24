@@ -301,6 +301,34 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
   }
 });
 
+// Debug endpoint to check bot control API status
+app.get("/api/debug/control-api", isAuthenticated, async (req, res) => {
+  try {
+    console.log("[DEBUG] Checking control API health...");
+    const health = await callBotControl("/control/health");
+    res.json({
+      success: true,
+      controlApi: health,
+      dashboardConfig: {
+        controlPort: BOT_CONTROL_PORT,
+        tokenSet: !!CONTROL_TOKEN,
+        tokenValue: CONTROL_TOKEN ? "***" : "(empty)",
+      },
+    });
+  } catch (error) {
+    console.error("[DEBUG] Control API health check failed:", error);
+    res.json({
+      success: false,
+      error: error.message,
+      dashboardConfig: {
+        controlPort: BOT_CONTROL_PORT,
+        tokenSet: !!CONTROL_TOKEN,
+        tokenValue: CONTROL_TOKEN ? "***" : "(empty)",
+      },
+    });
+  }
+});
+
 // Get bot guild info
 app.get("/api/guild/:guildId/bot-status", isAuthenticated, async (req, res) => {
   try {

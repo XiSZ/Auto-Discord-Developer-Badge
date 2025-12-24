@@ -143,6 +143,19 @@ function startControlApi() {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  // Health check endpoint (no auth required)
+  app.get("/control/health", (req, res) => {
+    console.log("[Control API] Health check requested");
+    res.json({
+      status: "ok",
+      botReady: client.isReady(),
+      guildCount: client.guilds.cache.size,
+      guildIds: Array.from(client.guilds.cache.keys()),
+      userId: client.user?.id,
+      username: client.user?.username,
+    });
+  });
+
   app.post("/control/reload-twitch", checkAuth, (req, res) => {
     try {
       loadTwitchData(true);
