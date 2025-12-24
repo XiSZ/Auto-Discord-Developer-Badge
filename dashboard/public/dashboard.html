@@ -552,95 +552,127 @@
 
         <p class="text-muted mb-4">
           Comprehensive moderation commands to manage your server. All commands
-          respect Discord permissions.
+          respect Discord permissions and role hierarchy.
         </p>
 
         <div class="row">
           <div class="col-md-6">
             <div class="stat-card">
-              <h5><i class="bi bi-person-x"></i> Member Actions</h5>
+              <h5><i class="bi bi-person-x text-danger"></i> Member Actions</h5>
               <hr />
-              <div class="mb-3">
-                <strong>/kick</strong> <code>&lt;user&gt; [reason]</code>
-                <p class="text-muted small mb-0">
+              <div class="command-item mb-3">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/kick</code>
+                  <code class="text-danger ms-2">&lt;user&gt;</code>
+                  <code class="text-secondary ms-1">[reason]</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">
                   Remove a user from the server
                 </p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Kick Members</small>
               </div>
-              <div class="mb-3">
-                <strong>/ban</strong> <code>&lt;user&gt; [reason]</code>
-                <p class="text-muted small mb-0">Permanently ban a user</p>
+              <div class="command-item mb-3">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/ban</code>
+                  <code class="text-danger ms-2">&lt;user&gt;</code>
+                  <code class="text-secondary ms-1">[reason]</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">Permanently ban a user</p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Ban Members</small>
               </div>
-              <div class="mb-3">
-                <strong>/mute</strong>
-                <code>&lt;user&gt; &lt;minutes&gt; [reason]</code>
-                <p class="text-muted small mb-0">Timeout a user temporarily</p>
+              <div class="command-item mb-3">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/mute</code>
+                  <code class="text-danger ms-2">&lt;user&gt;</code>
+                  <code class="text-danger ms-1">&lt;minutes&gt;</code>
+                  <code class="text-secondary ms-1">[reason]</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">Timeout a user temporarily</p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Moderate Members</small>
               </div>
-              <div class="mb-3">
-                <strong>/unmute</strong> <code>&lt;user&gt;</code>
-                <p class="text-muted small mb-0">Remove timeout from a user</p>
+              <div class="command-item mb-3">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/unmute</code>
+                  <code class="text-danger ms-2">&lt;user&gt;</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">Remove timeout from a user</p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Moderate Members</small>
               </div>
-              <div class="mb-0">
-                <strong>/warn</strong> <code>&lt;user&gt; [reason]</code>
-                <p class="text-muted small mb-0">Issue a warning to a user</p>
+              <div class="command-item mb-0">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/warn</code>
+                  <code class="text-danger ms-2">&lt;user&gt;</code>
+                  <code class="text-secondary ms-1">[reason]</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">Issue a warning to a user</p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Moderate Members</small>
               </div>
             </div>
           </div>
 
           <div class="col-md-6">
             <div class="stat-card">
-              <h5><i class="bi bi-gear"></i> Channel Management</h5>
+              <h5><i class="bi bi-gear text-primary"></i> Channel Management</h5>
               <hr />
-              <div class="mb-3">
-                <strong>/lock</strong>
-                <p class="text-muted small mb-0">
+              <div class="command-item mb-3">
+                <code class="command-name">/lock</code>
+                <p class="text-muted small mb-0 mt-1">
                   Prevent members from sending messages
                 </p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Manage Channels</small>
               </div>
-              <div class="mb-3">
-                <strong>/unlock</strong>
-                <p class="text-muted small mb-0">
+              <div class="command-item mb-3">
+                <code class="command-name">/unlock</code>
+                <p class="text-muted small mb-0 mt-1">
                   Allow members to send messages again
                 </p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Manage Channels</small>
               </div>
-              <div class="mb-3">
-                <strong>/slowmode</strong> <code>&lt;seconds&gt;</code>
-                <p class="text-muted small mb-0">
+              <div class="command-item mb-3">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/slowmode</code>
+                  <code class="text-danger ms-2">&lt;seconds&gt;</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">
                   Set delay between messages (0-21600s)
                 </p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Manage Channels</small>
               </div>
-              <div class="mb-0">
-                <strong>/purge</strong> <code>[amount]</code>
-                <p class="text-muted small mb-0">
+              <div class="command-item mb-0">
+                <div class="d-flex align-items-start flex-wrap">
+                  <code class="command-name">/purge</code>
+                  <code class="text-secondary ms-2">[amount]</code>
+                </div>
+                <p class="text-muted small mb-0 mt-1">
                   Bulk delete messages (up to 1000, max 14 days old)
                 </p>
+                <small class="text-muted"><i class="bi bi-key-fill"></i> Requires: Manage Messages</small>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="stat-card mt-3">
-          <h5><i class="bi bi-shield-check"></i> Permission Requirements</h5>
+        <div class="stat-card mt-3 border-warning">
+          <h5><i class="bi bi-shield-check text-warning"></i> Important Notes</h5>
           <hr />
-          <div class="row">
-            <div class="col-md-4">
-              <strong>Kick Members</strong>
-              <p class="text-muted small">/kick</p>
-            </div>
-            <div class="col-md-4">
-              <strong>Ban Members</strong>
-              <p class="text-muted small">/ban</p>
-            </div>
-            <div class="col-md-4">
-              <strong>Moderate Members</strong>
-              <p class="text-muted small">/mute, /unmute, /warn</p>
-            </div>
-            <div class="col-md-4">
-              <strong>Manage Channels</strong>
-              <p class="text-muted small">/lock, /unlock, /slowmode</p>
-            </div>
-            <div class="col-md-4">
-              <strong>Manage Messages</strong>
-              <p class="text-muted small">/purge, /say</p>
+          <div class="alert alert-warning mb-0">
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="bi bi-hierarchy"></i> Role Hierarchy</strong>
+                <p class="small mb-2">Bot cannot moderate users with roles higher than or equal to its highest role</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="bi bi-clock-history"></i> Message Age Limit</strong>
+                <p class="small mb-2">Purge command only works on messages less than 14 days old (Discord limitation)</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="bi bi-person-badge"></i> Permission Check</strong>
+                <p class="small mb-0">Both you and the bot must have the required permission for each command</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="bi bi-exclamation-triangle"></i> Timeout Duration</strong>
+                <p class="small mb-0">Mute duration can be up to 40,320 minutes (28 days)</p>
+              </div>
             </div>
           </div>
         </div>
