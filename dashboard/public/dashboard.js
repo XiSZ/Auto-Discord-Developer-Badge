@@ -270,9 +270,9 @@ function populateSidebarServerSelector() {
         return `
           <div class="sidebar-server-item ${active}" onclick="selectSidebarGuild('${g.id}')">
             <img src="${iconUrl}" alt="${g.name}" width="40" height="40" class="rounded-circle" style="flex-shrink: 0;" />
-            <div style="flex:1; min-width:0; max-width: 200px; overflow: hidden;">
-              <div class="item-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">${g.name}</div>
-              <div class="item-id" style="font-size: 0.7rem;"># ${g.id}</div>
+            <div style="flex:1; min-width:0; max-width: 220px; overflow: hidden;">
+              <div class="item-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; font-weight: 600;">${g.name}</div>
+              <div class="item-id" style="font-size: 0.7rem; opacity: 0.75;"># ${g.id}</div>
             </div>
             <span class="${statusClass}" style="flex-shrink: 0; margin-left: auto;">${statusText}</span>
           </div>`;
@@ -286,11 +286,15 @@ function populateSidebarServerSelector() {
 function openSidebarSelector() {
   const selector = document.getElementById("sidebarServerSelector");
   const menu = document.getElementById("sidebarServerMenu");
-  if (!selector || !guilds.length || !menu) return;
+  const card = document.getElementById("currentServerDisplay");
+  if (!selector || !guilds.length || !menu || !card) return;
   const nextState = !sidebarServerMenuOpen;
   menu.style.display = nextState ? "block" : "none";
   sidebarServerMenuOpen = nextState;
   if (nextState) {
+    const rect = card.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 6}px`;
+    menu.style.left = `${rect.left}px`;
     menu.scrollTop = 0;
   }
 }
