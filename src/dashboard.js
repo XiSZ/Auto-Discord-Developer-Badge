@@ -16,8 +16,31 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+const BOT_CONTROL_PORT = Number(process.env.BOT_CONTROL_PORT || 3210);
+const CONTROL_TOKEN = process.env.CONTROL_TOKEN || process.env.SESSION_SECRET || "";
 
 app.use(express.json());
+
+// Helper to call bot control API
+async function callBotControl(path, method = "GET", body = null) {
+  const url = `http://127.0.0.1:${BOT_CONTROL_PORT}${path}`;
+  const options = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "x-control-token": CONTROL_TOKEN
+    }
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(url);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
 
 // Public metadata for login screen
 app.get("/api/meta", (req, res) => {
@@ -217,14 +240,22 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
       (guild) => (guild.permissions & 0x20) === 0x20
     );
     
+    // Get bot guilds from control API
+    let botGuilds = [];
+    try {
+      botGuilds = await callBotControl("/control/guilds");
+    } catch (error) {
+      console.error("Failed to fetch bot guilds:", error);
+      // Continue without bot status if control API is unavailable
+    }
+    
+    const botGuildIds = new Set(botGuilds.map(g => g.id));
+    
     // Check which guilds the bot is in
-    const guildsWithBotStatus = manageableGuilds.map(guild => {
-      const botInGuild = client?.guilds?.cache?.has(guild.id) || false;
-      return {
-        ...guild,
-        botJoined: botInGuild
-      };
-    });
+    const guildsWithBotStatus = manageableGuilds.map(guild => ({
+      ...guild,
+      botJoined: botGuildIds.has(guild.id)
+    }));
     
     res.json(guildsWithBotStatus);
   } catch (error) {
@@ -236,23 +267,8 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
 app.get("/api/guild/:guildId/bot-status", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
-    const guild = client?.guilds?.cache?.get(guildId);
-    
-    if (!guild) {
-      return res.json({ 
-        joined: false,
-        memberCount: 0,
-        joinedAt: null
-      });
-    }
-    
-    res.json({
-      joined: true,
-      memberCount: guild.memberCount || 0,
-      joinedAt: guild.joinedAt?.toISOString() || null,
-      name: guild.name,
-      icon: guild.icon
-    });
+    const guildInfo = await callBotControl(`/control/guild/${guildId}`);
+    res.json(guildInfo);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -262,14 +278,8 @@ app.get("/api/guild/:guildId/bot-status", isAuthenticated, async (req, res) => {
 app.post("/api/guild/:guildId/leave", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
-    const guild = client?.guilds?.cache?.get(guildId);
-    
-    if (!guild) {
-      return res.status(404).json({ error: "Bot is not in this guild" });
-    }
-    
-    await guild.leave();
-    res.json({ success: true, message: "Bot left the server" });
+    const result = await callBotControl(`/control/guild/${guildId}/leave`, "POST");
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

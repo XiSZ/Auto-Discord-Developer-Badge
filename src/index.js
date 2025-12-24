@@ -162,6 +162,56 @@ function startControlApi() {
     }
   });
 
+  // Get guilds bot is in
+  app.get("/control/guilds", checkAuth, (req, res) => {
+    try {
+      const guilds = client.guilds.cache.map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        memberCount: g.memberCount,
+        joinedAt: g.joinedAt?.toISOString()
+      }));
+      res.json(guilds);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Get specific guild info
+  app.get("/control/guild/:guildId", checkAuth, (req, res) => {
+    try {
+      const guild = client.guilds.cache.get(req.params.guildId);
+      if (!guild) {
+        return res.json({ joined: false });
+      }
+      res.json({
+        joined: true,
+        id: guild.id,
+        name: guild.name,
+        icon: guild.icon,
+        memberCount: guild.memberCount,
+        joinedAt: guild.joinedAt?.toISOString()
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Leave guild
+  app.post("/control/guild/:guildId/leave", checkAuth, async (req, res) => {
+    try {
+      const guild = client.guilds.cache.get(req.params.guildId);
+      if (!guild) {
+        return res.status(404).json({ error: "Bot is not in this guild" });
+      }
+      await guild.leave();
+      res.json({ success: true, message: "Bot left the server" });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Bind to localhost only for safety
   app.listen(CONTROL_PORT, "127.0.0.1", () => {
     logger.info(`Control API listening on 127.0.0.1:${CONTROL_PORT}`);
