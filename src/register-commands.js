@@ -67,6 +67,12 @@ const commands = [
       .setName("help")
       .setDescription("Display all available commands")
   ),
+  // Invite command to get bot invite link
+  makeUserInstallable(
+    new SlashCommandBuilder()
+      .setName("invite")
+      .setDescription("Get the bot invite link")
+  ),
   // Server info command
   makeGuildOnly(
     new SlashCommandBuilder()

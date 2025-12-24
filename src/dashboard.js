@@ -985,7 +985,17 @@ app.post("/api/twitch/check", isAuthenticated, async (req, res) => {
 app.get("/api/invite", (req, res) => {
   const clientId = process.env.CLIENT_ID;
   const permissions = "8"; // Administrator permission
-  const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&scope=bot%20applications.commands`;
+  const guildId = req.query.guildId;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    permissions,
+    scope: "bot applications.commands",
+  });
+  if (guildId) {
+    params.set("guild_id", guildId);
+    params.set("disable_guild_select", "true");
+  }
+  const inviteUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
   res.json({ inviteUrl });
 });
 

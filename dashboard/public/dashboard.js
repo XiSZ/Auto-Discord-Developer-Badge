@@ -8,6 +8,47 @@ let userMenuOpen = false;
 let sidebarOpen = false;
 let sidebarServerMenuOpen = false;
 
+// Toast helper
+function showToast(message, type = "info", timeout = 3500) {
+  const containerId = "toastContainer";
+  let container = document.getElementById(containerId);
+  if (!container) {
+    container = document.createElement("div");
+    container.id = containerId;
+    container.style.position = "fixed";
+    container.style.top = "16px";
+    container.style.right = "16px";
+    container.style.zIndex = "9999";
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "8px";
+    document.body.appendChild(container);
+  }
+
+  const el = document.createElement("div");
+  const colors = {
+    success: "#43b581",
+    danger: "#e74c3c",
+    info: "#3498db",
+    warning: "#faa61a",
+  };
+  const color = colors[type] || colors.info;
+  el.style.background = "rgba(21, 32, 43, 0.95)";
+  el.style.color = "white";
+  el.style.padding = "10px 14px";
+  el.style.borderRadius = "10px";
+  el.style.border = `1px solid ${color}`;
+  el.style.boxShadow = "0 8px 18px rgba(0,0,0,0.25)";
+  el.textContent = message;
+  container.appendChild(el);
+
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transition = "opacity 0.3s";
+    setTimeout(() => el.remove(), 300);
+  }, timeout);
+}
+
 // Utility: fetch with timeout and JSON parsing
 async function fetchJSON(url, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
@@ -120,6 +161,46 @@ document.addEventListener("click", (e) => {
   if (card && card.contains(e.target)) return;
   closeSidebarSelectorMenu();
 });
+
+// Invite bot flow with post-invite polling
+async function inviteBot(guildId) {
+  try {
+    const res = await fetch(
+      guildId ? `/api/invite?guildId=${guildId}` : `/api/invite`
+    );
+    const data = await res.json();
+    if (!res.ok || !data.inviteUrl) {
+      throw new Error(data.error || "Failed to generate invite link");
+    }
+    window.open(data.inviteUrl, "_blank");
+    showToast("Invite opened in new tab. Waiting for bot to join…", "info");
+    pollBotJoin(guildId, 6, 2500);
+  } catch (e) {
+    showToast(e.message, "danger");
+  }
+}
+
+async function pollBotJoin(guildId, attempts = 6, delayMs = 2500) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const data = await fetchJSON("/api/guilds");
+      const list = Array.isArray(data) ? data : data.guilds || [];
+      guilds = list;
+      const match = list.find((g) => g.id === guildId);
+      if (match && match.botJoined) {
+        showToast(`Bot joined ${match.name}`, "success");
+        updateServerHeaders();
+        populateSidebarServerSelector();
+        loadGuilds();
+        return;
+      }
+    } catch (e) {
+      console.warn("Poll bot join failed", e);
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  showToast("Bot not detected yet. You can retry refresh.", "warning");
+}
 
 // Sidebar toggle for mobile
 function toggleSidebar(forceState) {
@@ -288,9 +369,9 @@ async function loadGuilds() {
             )}')" title="Leave server" style="padding: 4px 12px;">
               <i class="bi bi-box-arrow-right"></i>
             </button>`
-          : `<a href="/api/invite?guildId=${guild.id}" target="_blank" class="btn btn-sm btn-primary" onclick="event.stopPropagation()" title="Invite bot" style="padding: 4px 12px;">
+          : `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); inviteBot('${guild.id}')" title="Invite bot" style="padding: 4px 12px;">
               <i class="bi bi-plus-circle"></i> Invite
-            </a>`;
+            </button>`;
 
         return `
         <div class="server-item" onclick="selectGuild('${
