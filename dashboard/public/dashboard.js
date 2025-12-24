@@ -6,6 +6,7 @@ let availableChannels = [];
 let channelFetchError = null;
 let userMenuOpen = false;
 let sidebarOpen = false;
+let sidebarServerMenuOpen = false;
 
 // Utility: fetch with timeout and JSON parsing
 async function fetchJSON(url, options = {}, timeoutMs = 15000) {
@@ -110,6 +111,16 @@ document.addEventListener("click", (e) => {
   closeUserMenu();
 });
 
+// Close sidebar server menu when clicking outside
+document.addEventListener("click", (e) => {
+  if (!sidebarServerMenuOpen) return;
+  const menu = document.getElementById("sidebarServerMenu");
+  const card = document.getElementById("currentServerDisplay");
+  if (menu && menu.contains(e.target)) return;
+  if (card && card.contains(e.target)) return;
+  closeSidebarSelectorMenu();
+});
+
 // Sidebar toggle for mobile
 function toggleSidebar(forceState) {
   const sidebar = document.getElementById("sidebar");
@@ -142,6 +153,7 @@ window.addEventListener("resize", () => {
 // Populate sidebar server selector
 function populateSidebarServerSelector() {
   const selector = document.getElementById("sidebarServerSelector");
+  const menu = document.getElementById("sidebarServerMenu");
   if (!selector || !guilds.length) return;
 
   selector.innerHTML =
@@ -159,15 +171,70 @@ function populateSidebarServerSelector() {
     this.style.display = "none";
     this.size = 1;
   };
+
+  // Build custom menu with icons and status
+  if (menu) {
+    const items = guilds
+      .map((g) => {
+        const iconUrl = g.icon
+          ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=64`
+          : "https://cdn.discordapp.com/embed/avatars/0.png";
+        const active = g.id === currentGuildId ? "active" : "";
+        const statusClass = g.botJoined
+          ? "status-pill active"
+          : "status-pill inactive";
+        const statusText = g.botJoined
+          ? '<i class="bi bi-check-circle-fill"></i> Active'
+          : '<i class="bi bi-slash-circle"></i> Not Joined';
+        return `
+          <div class="sidebar-server-item ${active}" onclick="selectSidebarGuild('${g.id}')">
+            <img src="${iconUrl}" alt="${g.name}" width="32" height="32" class="rounded-circle" />
+            <div style=\"flex:1; min-width:0;\">
+              <div class="item-name">${g.name}</div>
+              <div class="item-id"># ${g.id}</div>
+            </div>
+            <span class="${statusClass}">${statusText}</span>
+          </div>`;
+      })
+      .join("");
+    menu.innerHTML = items;
+  }
 }
 
 // Open the hidden dropdown from the sidebar card
 function openSidebarSelector() {
   const selector = document.getElementById("sidebarServerSelector");
+  const menu = document.getElementById("sidebarServerMenu");
   if (!selector || !guilds.length) return;
   selector.style.display = "block";
   selector.size = Math.min(guilds.length + 1, 8);
   selector.focus();
+  if (menu) {
+    menu.style.display = "block";
+    sidebarServerMenuOpen = true;
+  }
+}
+
+function closeSidebarSelectorMenu() {
+  const menu = document.getElementById("sidebarServerMenu");
+  if (menu) {
+    menu.style.display = "none";
+  }
+  sidebarServerMenuOpen = false;
+}
+
+function selectSidebarGuild(guildId) {
+  if (!guildId) return;
+  const guild = guilds.find((g) => g.id === guildId);
+  if (guild) {
+    selectGuild(guild.id, guild.name);
+  }
+  closeSidebarSelectorMenu();
+  const selector = document.getElementById("sidebarServerSelector");
+  if (selector) selector.style.display = "none";
+  if (window.innerWidth <= 768) {
+    closeSidebar();
+  }
 }
 
 // (removed stray commands rendering fragment)
@@ -360,15 +427,11 @@ function updateServerHeaders() {
     sidebarName.textContent = currentGuild.name;
     if (sidebarStatus) {
       sidebarStatus.style.display = "block";
-      if (currentGuild.botJoined) {
-        sidebarStatus.style.color = "#43b581";
-        sidebarStatus.innerHTML =
-          '<i class="bi bi-check-circle-fill"></i> Active';
-      } else {
-        sidebarStatus.style.color = "#faa61a";
-        sidebarStatus.innerHTML =
-          '<i class="bi bi-slash-circle"></i> Not Joined';
-      }
+      sidebarStatus.classList.toggle("active", currentGuild.botJoined);
+      sidebarStatus.classList.toggle("inactive", !currentGuild.botJoined);
+      sidebarStatus.innerHTML = currentGuild.botJoined
+        ? '<i class="bi bi-check-circle-fill"></i> Active'
+        : '<i class="bi bi-slash-circle"></i> Not Joined';
     }
   }
 
@@ -1254,6 +1317,7 @@ async function loadTwitchContent() {
     const channels = Array.isArray(chans.channels) ? chans.channels : [];
     const streamers = Array.isArray(cfg.streamers) ? cfg.streamers : [];
     const selected = cfg.channelId || "";
+    const allowDuplicates = cfg.allowDuplicates === true;
 
     const channelOptions = [
       `<option value="">Select a channel...</option>`,
@@ -1276,6 +1340,17 @@ async function loadTwitchContent() {
               <select id="twitchChannel" class="form-select">${channelOptions}</select>
               <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> The channel where live notifications will be posted</small>
             </div>
+            <div class="mb-2 d-flex align-items-center justify-content-between">
+              <div>
+                <label class="form-label fw-bold mb-0">Duplicate Notifications</label>
+                <small class="text-muted d-block">Allow multiple alerts per streamer per day</small>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="allowDuplicates" ${
+                  allowDuplicates ? "checked" : ""
+                }>
+              </div>
+            </div>
             <div class="d-flex gap-2">
               <button class="btn btn-outline-secondary" onclick="reloadTwitchConfigNow()"><i class="bi bi-arrow-clockwise"></i> Reload Config</button>
               <button class="btn btn-outline-primary" onclick="checkTwitchNow()"><i class="bi bi-lightning-charge"></i> Check Now</button>
@@ -1286,7 +1361,9 @@ async function loadTwitchContent() {
           <div class="stat-card">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h5 class="mb-0"><i class="bi bi-people"></i> Monitored Streamers</h5>
-              <span class="badge bg-primary" id="twitchStreamersCount">${streamers.length}</span>
+              <span class="badge bg-primary" id="twitchStreamersCount">${
+                streamers.length
+              }</span>
             </div>
             <hr>
             <div id="twitchStreamersList"></div>
@@ -1641,13 +1718,15 @@ function removeStreamer(name) {
 async function saveTwitchConfig() {
   try {
     const channelId = document.getElementById("twitchChannel")?.value || null;
+    const allowDuplicates =
+      document.getElementById("allowDuplicates")?.checked || false;
     const streamers = Array.isArray(window._twitchStreamers)
       ? window._twitchStreamers
       : [];
     const r = await fetch(`/api/guild/${currentGuildId}/twitch-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channelId, streamers }),
+      body: JSON.stringify({ channelId, streamers, allowDuplicates }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed to save Twitch config");

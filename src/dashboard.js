@@ -624,10 +624,15 @@ app.get(
         guildId,
         "twitch-config.json"
       );
-      const config = readJSON(configPath, { streamers: [], channelId: null });
+      const config = readJSON(configPath, {
+        streamers: [],
+        channelId: null,
+        allowDuplicates: false,
+      });
       res.json({
         streamers: Array.isArray(config.streamers) ? config.streamers : [],
         channelId: config.channelId || null,
+        allowDuplicates: config.allowDuplicates === true,
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -766,7 +771,7 @@ app.post(
   async (req, res) => {
     try {
       const { guildId } = req.params;
-      const { streamers, channelId } = req.body || {};
+      const { streamers, channelId, allowDuplicates } = req.body || {};
 
       // Verify permission
       const userGuilds = req.user.guilds || [];
@@ -794,6 +799,7 @@ app.post(
           )
         ),
         channelId: channelId || null,
+        allowDuplicates: allowDuplicates === true,
       };
       writeJSON(configPath, next);
       res.json({ success: true, message: "Twitch configuration saved." });

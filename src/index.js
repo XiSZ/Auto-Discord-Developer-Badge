@@ -83,6 +83,8 @@ let twitchAPI = null;
 const twitchStreamers = new Map(); // Map<guildId, Set<streamerUsername>>
 const twitchNotificationChannels = new Map(); // Map<guildId, channelId>
 const twitchStreamStatus = new Map(); // Map<streamerUsername, isLive>
+const twitchAllowDuplicates = new Map(); // Map<guildId, boolean> whether multiple notifications per day are allowed
+const twitchLastNotification = new Map(); // Map<guildId, Map<streamerUsername, YYYY-MM-DD>>
 
 // Translation configuration per guild
 const translationConfig = new Map(); // Map<guildId, { channels: Set<channelId>, displayMode: string, targetLanguages: Array<string>, outputChannelId: string }>
@@ -295,6 +297,10 @@ function getServerConfigPath(guildId) {
   return join(SERVERS_DIR, guildId, "twitch-config.json");
 }
 
+function getTwitchStatePath(guildId) {
+  return join(SERVERS_DIR, guildId, "twitch-state.json");
+}
+
 // Ensure server directory exists
 function ensureServerDirectory(guildId) {
   const serverDir = join(SERVERS_DIR, guildId);
@@ -331,6 +337,34 @@ function loadTwitchData(suppressLog = false) {
             }
             if (data.channelId) {
               twitchNotificationChannels.set(guildId, data.channelId);
+            }
+
+            // Allow duplicates toggle (default: false to prevent spam)
+            twitchAllowDuplicates.set(guildId, data.allowDuplicates === true);
+
+            // Load last notification state for deduplication
+            try {
+              const statePath = getTwitchStatePath(guildId);
+              if (fileOps.exists(statePath)) {
+                const state = fileOps.readJSON(statePath);
+                const map = new Map();
+                if (
+                  state &&
+                  state.lastNotified &&
+                  typeof state.lastNotified === "object"
+                ) {
+                  for (const [streamer, dateStr] of Object.entries(
+                    state.lastNotified
+                  )) {
+                    map.set(streamer, dateStr);
+                  }
+                }
+                twitchLastNotification.set(guildId, map);
+              }
+            } catch (stateErr) {
+              logger.warn(
+                `Could not load Twitch notification state for ${guildId}: ${stateErr.message}`
+              );
             }
 
             // Get server info
@@ -377,6 +411,22 @@ function loadBadgeSettings() {
   }
 }
 
+function saveTwitchState(guildId) {
+  try {
+    ensureServerDirectory(guildId);
+    const statePath = getTwitchStatePath(guildId);
+    const map = twitchLastNotification.get(guildId) || new Map();
+    const payload = {
+      lastNotified: Object.fromEntries(map.entries()),
+    };
+    writeFileSync(statePath, JSON.stringify(payload, null, 2), "utf-8");
+  } catch (e) {
+    logger.warn(
+      `Failed to persist Twitch state for guild ${guildId}: ${e.message}`
+    );
+  }
+}
+
 function saveBadgeSettings() {
   try {
     const payload = {
@@ -411,6 +461,7 @@ function saveTwitchData(guildId) {
     const data = {
       streamers: Array.from(twitchStreamers.get(guildId) || []),
       channelId: twitchNotificationChannels.get(guildId) || null,
+      allowDuplicates: twitchAllowDuplicates.get(guildId) === true,
     };
 
     saveConfigFile(configPath, data, "Twitch configuration", guildId);
@@ -1250,6 +1301,10 @@ async function checkTwitchStreamers() {
     const channelId = twitchNotificationChannels.get(guildId);
     if (!channelId) continue;
 
+    const allowDuplicates = twitchAllowDuplicates.get(guildId) === true;
+    const lastMap = twitchLastNotification.get(guildId) || new Map();
+    const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+
     try {
       const channel = await client.channels.fetch(channelId);
       if (!channel || !channel.isTextBased()) continue;
@@ -1258,6 +1313,16 @@ async function checkTwitchStreamers() {
         const streamInfo = await twitchAPI.getStreamInfo(streamer);
         const wasLive = twitchStreamStatus.get(streamer);
         const isLive = streamInfo !== null;
+
+        // Dedup: skip if already notified today and duplicates are blocked
+        if (!allowDuplicates) {
+          const lastDate = lastMap.get(streamer);
+          if (lastDate === todayKey && isLive) {
+            // Already announced today; update live state and continue
+            twitchStreamStatus.set(streamer, isLive);
+            continue;
+          }
+        }
 
         // If streamer went live, send notification
         if (isLive && !wasLive) {
@@ -1300,6 +1365,11 @@ async function checkTwitchStreamers() {
           console.log(
             `🔴 Sent live notification for ${streamInfo.user_name} in guild ${guildId}`
           );
+
+          // Record notification date and persist
+          lastMap.set(streamer, todayKey);
+          twitchLastNotification.set(guildId, lastMap);
+          saveTwitchState(guildId);
         }
 
         // Update status
@@ -3248,6 +3318,27 @@ client.on("interactionCreate", async (interaction) => {
 
       console.log(
         `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`
+      );
+    } else if (subcommand === "duplicates") {
+      const allow = interaction.options.getBoolean("allow");
+      const channel = twitchNotificationChannels.get(guildId);
+
+      twitchAllowDuplicates.set(guildId, allow === true);
+      saveTwitchData(guildId);
+
+      await interaction.reply({
+        content: allow
+          ? "✅ Duplicate Twitch alerts are now ALLOWED (multiple per streamer per day)."
+          : "✅ Duplicate Twitch alerts are now BLOCKED (only one per streamer per day).",
+        ephemeral: true,
+      });
+
+      console.log(
+        `🔄 ${
+          interaction.user.tag
+        } set Twitch duplicate notifications to ${allow} in guild ${
+          interaction.guild.name
+        } (channel: ${channel || "not set"})`
       );
     }
   }

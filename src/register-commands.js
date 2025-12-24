@@ -633,6 +633,19 @@ const commands = [
               .setRequired(true)
           )
       )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("duplicates")
+          .setDescription("Allow or block multiple alerts per day")
+          .addBooleanOption((option) =>
+            option
+              .setName("allow")
+              .setDescription(
+                "Enable to permit multiple notifications per streamer per day"
+              )
+              .setRequired(true)
+          )
+      )
   ),
   // 8ball command
   makeUserInstallable(

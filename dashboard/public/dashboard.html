@@ -174,6 +174,96 @@
         color: white;
         border-left: 3px solid #667eea;
       }
+      .sidebar-selector-card {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.06),
+            rgba(255, 255, 255, 0.02)
+          ),
+          rgba(44, 62, 80, 0.9);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      }
+      .sidebar-selector-card .server-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .sidebar-selector-card .avatar-ring {
+        border: 2px solid rgba(102, 126, 234, 0.55);
+        border-radius: 50%;
+        padding: 2px;
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.3),
+          rgba(118, 75, 162, 0.3)
+        );
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        border: 1px solid transparent;
+      }
+      .status-pill.active {
+        background: rgba(67, 181, 129, 0.15);
+        color: #43b581;
+        border-color: rgba(67, 181, 129, 0.35);
+      }
+      .status-pill.inactive {
+        background: rgba(250, 166, 26, 0.15);
+        color: #faa61a;
+        border-color: rgba(250, 166, 26, 0.35);
+      }
+      .sidebar-server-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: rgba(21, 32, 43, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(10px);
+        max-height: 320px;
+        overflow-y: auto;
+        z-index: 1050;
+        padding: 6px;
+      }
+      .sidebar-server-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.1s;
+      }
+      .sidebar-server-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-1px);
+      }
+      .sidebar-server-item.active {
+        background: rgba(102, 126, 234, 0.14);
+        border: 1px solid rgba(102, 126, 234, 0.35);
+      }
+      .sidebar-server-item .item-name {
+        color: #e9ecef;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-server-item .item-id {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.75rem;
+      }
       .user-menu {
         position: absolute;
         top: 100%;
@@ -386,28 +476,23 @@
         >
         <div
           id="currentServerDisplay"
-          class="card"
-          style="
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            cursor: pointer;
-            transition: all 0.3s;
-          "
+          class="card sidebar-selector-card"
+          style="cursor: pointer; transition: all 0.3s"
           onclick="openSidebarSelector()"
         >
           <div class="card-body p-2">
             <div class="d-flex align-items-center">
-              <img
-                id="sidebarServerIcon"
-                src="https://cdn.discordapp.com/embed/avatars/0.png"
-                alt="Server"
-                class="rounded-circle me-2"
-                width="36"
-                height="36"
-                style="border: 2px solid rgba(102, 126, 234, 0.5)"
-              />
-              <div style="flex: 1; min-width: 0">
+              <div class="avatar-ring">
+                <img
+                  id="sidebarServerIcon"
+                  src="https://cdn.discordapp.com/embed/avatars/0.png"
+                  alt="Server"
+                  class="rounded-circle me-2"
+                  width="36"
+                  height="36"
+                />
+              </div>
+              <div class="server-meta" style="flex: 1; min-width: 0">
                 <div
                   id="sidebarServerName"
                   style="
@@ -421,15 +506,11 @@
                 >
                   Choose a server...
                 </div>
-                <small
+                <span
                   id="sidebarServerStatus"
-                  style="
-                    color: rgba(102, 126, 234, 0.9);
-                    font-size: 0.7rem;
-                    font-weight: 500;
-                    display: none;
-                  "
-                  ><i class="bi bi-check-circle-fill"></i> Active</small
+                  class="status-pill"
+                  style="display: none"
+                  ><i class="bi bi-check-circle-fill"></i> Active</span
                 >
               </div>
               <i
@@ -449,6 +530,11 @@
             Choose a server...
           </option>
         </select>
+        <div
+          id="sidebarServerMenu"
+          class="sidebar-server-menu"
+          style="display: none"
+        ></div>
       </div>
 
       <nav>
