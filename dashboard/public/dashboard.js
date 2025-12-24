@@ -622,11 +622,12 @@ const LANG_MAP = {
 };
 
 function languageDisplay(code, includeCode = false) {
-  if (!code) return "🌐 Unknown";
+  if (!code) return '<span class="flag-emoji">🌐</span> Unknown';
   const norm = String(code).toLowerCase();
   const info = LANG_MAP[norm] || LANG_MAP[norm.split("-")[0]];
-  if (!info) return `🌐 ${code}`;
-  return includeCode ? `${info.flag} ${info.name} (${code})` : `${info.flag} ${info.name}`;
+  if (!info) return `<span class="flag-emoji">🌐</span> ${code}`;
+  const display = includeCode ? `<span class="flag-emoji">${info.flag}</span> ${info.name} (${code})` : `<span class="flag-emoji">${info.flag}</span> ${info.name}`;
+  return display;
 }
 
 function renderLanguageBadges() {
