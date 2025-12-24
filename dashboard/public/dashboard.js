@@ -87,7 +87,7 @@ async function loadGuilds() {
   const container = document.getElementById("serversList");
   if (container) {
     container.innerHTML = `
-      <div class="col-12 text-center py-5">
+      <div class="text-center py-5">
         <div class="spinner-border text-secondary" role="status"></div>
         <p class="mt-3 text-muted">Loading servers…</p>
       </div>`;
@@ -99,9 +99,9 @@ async function loadGuilds() {
     if (!guilds || guilds.length === 0) {
       if (container) {
         container.innerHTML = `
-          <div class="col-12 text-center py-5">
+          <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="mt-3 text-muted">No servers found where you have &quot;Manage Server&quot; permission</p>
+            <p class="mt-3 text-muted">No servers found where you have "Manage Server" permission</p>
           </div>`;
       }
       return;
@@ -112,20 +112,46 @@ async function loadGuilds() {
         const iconUrl = guild.icon
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
           : "https://cdn.discordapp.com/embed/avatars/0.png";
+        
+        const botStatus = guild.botJoined 
+          ? '<span class="badge bg-success ms-2"><i class="bi bi-check-circle-fill"></i> Bot Joined</span>'
+          : '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-exclamation-circle"></i> Bot Not in Server</span>';
+        
+        const actionButtons = guild.botJoined
+          ? `<button class="btn btn-sm btn-outline-primary me-2" onclick="refreshBotStatus('${guild.id}')" title="Refresh bot status">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="leaveGuild('${guild.id}', '${guild.name.replace(/'/g, "\\'")}')">
+              <i class="bi bi-box-arrow-right"></i> Leave
+            </button>`
+          : `<button class="btn btn-sm btn-primary" onclick="window.open('/api/invite?guildId=${guild.id}', '_blank')">
+              <i class="bi bi-plus-circle"></i> Invite Bot
+            </button>`;
+        
         return `
-        <div class="col-md-4 col-lg-3 mb-3">
-          <div class="server-card card h-100" onclick="selectGuild('${
-            guild.id
-          }', '${guild.name.replace(/'/g, "\\'")}')">
-            <div class="card-body text-center">
-              <img src="${iconUrl}" alt="${
-          guild.name
-        }" class="rounded-circle mb-3" width="80" height="80">
-              <h6 class="card-title">${guild.name}</h6>
-              <small class="text-muted">Click to manage</small>
+        <div class="stat-card mb-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center flex-grow-1" style="cursor: pointer;" onclick="selectGuild('${guild.id}', '${guild.name.replace(/'/g, "\\'")}')">
+              <img src="${iconUrl}" alt="${guild.name}" class="rounded-circle me-3" width="64" height="64" style="border: 2px solid #dee2e6;">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-1">
+                  <h5 class="mb-0">${guild.name}</h5>
+                  ${botStatus}
+                </div>
+                <small class="text-muted">
+                  <i class="bi bi-hash"></i> Server ID: ${guild.id}
+                </small>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              ${actionButtons}
+              <button class="btn btn-sm btn-primary" onclick="selectGuild('${guild.id}', '${guild.name.replace(/'/g, "\\'")}')">
+                <i class="bi bi-gear"></i> Manage
+              </button>
             </div>
           </div>
-        </div>`;
+        </div>
+      `;
       })
       .join("");
     if (container) container.innerHTML = html;
@@ -1740,6 +1766,51 @@ async function deleteCommand(id, scope) {
     reloadCommands();
   } catch (e) {
     alert("Failed to delete command: " + e.message);
+  }
+}
+
+// Refresh servers list
+async function refreshServers() {
+  await loadGuilds();
+  alert("Servers refreshed!");
+}
+
+// Refresh bot status for a specific guild
+async function refreshBotStatus(guildId) {
+  try {
+    const data = await fetchJSON(`/api/guild/${guildId}/bot-status`);
+    if (data.joined) {
+      alert(`Bot is in server!\nMember Count: ${data.memberCount}\nJoined: ${new Date(data.joinedAt).toLocaleString()}`);
+    } else {
+      alert("Bot is not in this server");
+    }
+    await loadGuilds(); // Refresh the list
+  } catch (error) {
+    alert("Failed to fetch bot status: " + error.message);
+  }
+}
+
+// Leave a guild
+async function leaveGuild(guildId, guildName) {
+  if (!confirm(`Are you sure you want the bot to leave "${guildName}"?\n\nThis will remove the bot from the server. You can re-invite it later.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/guild/${guildId}/leave`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to leave server");
+    }
+    
+    alert(`Bot successfully left "${guildName}"`);
+    await loadGuilds(); // Refresh the list
+  } catch (error) {
+    alert("Failed to leave server: " + error.message);
   }
 }
 

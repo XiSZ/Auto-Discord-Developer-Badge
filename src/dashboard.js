@@ -216,11 +216,65 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
     const manageableGuilds = guilds.filter(
       (guild) => (guild.permissions & 0x20) === 0x20
     );
-    res.json(manageableGuilds);
+    
+    // Check which guilds the bot is in
+    const guildsWithBotStatus = manageableGuilds.map(guild => {
+      const botInGuild = client?.guilds?.cache?.has(guild.id) || false;
+      return {
+        ...guild,
+        botJoined: botInGuild
+      };
+    });
+    
+    res.json(guildsWithBotStatus);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get bot guild info
+app.get("/api/guild/:guildId/bot-status", isAuthenticated, async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const guild = client?.guilds?.cache?.get(guildId);
+    
+    if (!guild) {
+      return res.json({ 
+        joined: false,
+        memberCount: 0,
+        joinedAt: null
+      });
+    }
+    
+    res.json({
+      joined: true,
+      memberCount: guild.memberCount || 0,
+      joinedAt: guild.joinedAt?.toISOString() || null,
+      name: guild.name,
+      icon: guild.icon
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Leave guild
+app.post("/api/guild/:guildId/leave", isAuthenticated, async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const guild = client?.guilds?.cache?.get(guildId);
+    
+    if (!guild) {
+      return res.status(404).json({ error: "Bot is not in this guild" });
+    }
+    
+    await guild.leave();
+    res.json({ success: true, message: "Bot left the server" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/guild/:guildId/config", isAuthenticated, async (req, res) => {
   try {
     const { guildId } = req.params;
