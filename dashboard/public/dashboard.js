@@ -539,19 +539,19 @@ async function loadGuildStats() {
                         ${
                           pairs.length > 0
                             ? pairs
-                                .map(
-                                  ([pair, count]) => {
-                                    const [from, to] = pair.split("->").map(c => c.trim());
-                                    const fromDisplay = languageDisplay(from);
-                                    const toDisplay = languageDisplay(to);
-                                    return `
+                                .map(([pair, count]) => {
+                                  const [from, to] = pair
+                                    .split("->")
+                                    .map((c) => c.trim());
+                                  const fromDisplay = languageDisplay(from);
+                                  const toDisplay = languageDisplay(to);
+                                  return `
                             <div class="d-flex justify-content-between mb-2">
                                 <span><strong>${fromDisplay} → ${toDisplay}</strong></span>
                                 <span class="badge bg-primary">${count} translations</span>
                             </div>
                         `;
-                                  }
-                                )
+                                })
                                 .join("")
                             : '<p class="text-muted">No data yet</p>'
                         }
@@ -621,12 +621,12 @@ const LANG_MAP = {
   pl: { name: "Polish", flag: "🇵🇱" },
 };
 
-function languageDisplay(code) {
+function languageDisplay(code, includeCode = false) {
   if (!code) return "🌐 Unknown";
   const norm = String(code).toLowerCase();
   const info = LANG_MAP[norm] || LANG_MAP[norm.split("-")[0]];
   if (!info) return `🌐 ${code}`;
-  return `${info.flag} ${info.name} ${code}`;
+  return includeCode ? `${info.flag} ${info.name} (${code})` : `${info.flag} ${info.name}`;
 }
 
 function renderLanguageBadges() {
