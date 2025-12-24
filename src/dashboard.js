@@ -38,19 +38,26 @@ app.use(express.json());
 // Helper to call bot control API
 async function callBotControl(path, method = "GET", body = null) {
   const url = `http://127.0.0.1:${BOT_CONTROL_PORT}${path}`;
+  const token = CONTROL_TOKEN;
+  console.log(`[Dashboard] Calling bot control API: ${url}`);
+  console.log(
+    `[Dashboard] Token being sent: ${
+      token ? "SET (length: " + token.length + ")" : "undefined/empty"
+    }`
+  );
+
   const options = {
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-control-token": CONTROL_TOKEN,
+      "x-control-token": token,
     },
   };
   if (body) {
     options.body = JSON.stringify(body);
   }
   try {
-    console.log(`[Dashboard] Calling bot control API: ${url}`);
-    const response = await fetch(url);
+    const response = await fetch(url, options);
     if (!response.ok) {
       const error = await response
         .json()
