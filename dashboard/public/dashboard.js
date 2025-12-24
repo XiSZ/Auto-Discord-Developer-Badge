@@ -250,13 +250,10 @@ async function loadGuildConfig() {
 
             <div class="mb-3">
               <label class="form-label">Output Channel</label>
-              <div class="input-group">
-                <span class="input-group-text">#</span>
-                <input type="text" class="form-control" id="outputChannel" 
-                  value="${currentConfig.outputChannelId || ""}"
-                  placeholder="Channel ID (leave blank for same channel)">
-              </div>
-              <small class="text-muted">Optional. Enter a channel ID to redirect translations.</small>
+              <select class="form-select" id="outputChannel">
+                <option value="">Same as source channel</option>
+              </select>
+              <small class="text-muted">Optional. Select a channel to redirect all translations.</small>
             </div>
 
             <button class="btn btn-success w-100" onclick="saveConfig()">
@@ -296,6 +293,7 @@ async function loadGuildConfig() {
 
     renderLanguageBadges();
     renderChannelPicker();
+    renderOutputChannelDropdown();
     renderSelectedChannels();
   } catch (error) {
     console.error("Error loading config:", error);
@@ -468,12 +466,37 @@ function renderChannelPicker() {
             ${currentConfig.channels.includes(channel.id) ? "checked" : ""}
             onchange="toggleChannelSelection('${channel.id}', this.checked)">
           <label class="form-check-label" for="channel-${channel.id}">
-            <i class="bi bi-hash"></i> ${channel.name}
+            <i class="bi bi-hash"></i> ${
+              channel.name
+            } <span class="text-muted small">(${channel.id})</span>
           </label>
         </div>
       `
     )
     .join("");
+}
+
+function renderOutputChannelDropdown() {
+  const dropdown = document.getElementById("outputChannel");
+  if (!dropdown) return;
+
+  // Clear existing options except the first one
+  dropdown.innerHTML = '<option value="">Same as source channel</option>';
+
+  if (!availableChannels || availableChannels.length === 0) {
+    return;
+  }
+
+  // Add all available channels as options
+  availableChannels.forEach((channel) => {
+    const option = document.createElement("option");
+    option.value = channel.id;
+    option.textContent = `#${channel.name} (${channel.id})`;
+    if (currentConfig.outputChannelId === channel.id) {
+      option.selected = true;
+    }
+    dropdown.appendChild(option);
+  });
 }
 
 function syncChannelCheckboxes() {
@@ -631,7 +654,7 @@ async function saveConfig() {
 
   const displayMode = document.getElementById("displayMode").value;
   const outputChannelId =
-    document.getElementById("outputChannel").value.trim() || null;
+    document.getElementById("outputChannel").value || null;
 
   currentConfig.displayMode = displayMode;
   currentConfig.outputChannelId = outputChannelId;
