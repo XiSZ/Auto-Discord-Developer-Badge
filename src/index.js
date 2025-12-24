@@ -2663,24 +2663,36 @@ client.on("interactionCreate", async (interaction) => {
 
   // Dashboard link command
   if (interaction.commandName === "dashboard") {
-    const dashboardUrl = getDashboardUrl();
-    const note =
-      process.env.DASHBOARD_PUBLIC_URL ||
-      process.env.DASHBOARD_URL ||
-      process.env.PUBLIC_DASHBOARD_URL ||
-      process.env.APP_URL ||
-      process.env.WEBSITE_URL
-        ? ""
-        : "Tip: set DASHBOARD_PUBLIC_URL in .env for a shareable link.";
+    try {
+      const dashboardUrl = getDashboardUrl();
+      const note =
+        process.env.DASHBOARD_PUBLIC_URL ||
+        process.env.DASHBOARD_URL ||
+        process.env.PUBLIC_DASHBOARD_URL ||
+        process.env.APP_URL ||
+        process.env.WEBSITE_URL
+          ? ""
+          : "Tip: set DASHBOARD_PUBLIC_URL in .env for a shareable link.";
 
-    await interaction.reply({
-      content: note
-        ? `🌐 **Dashboard**\n${dashboardUrl}\n${note}`
-        : `🌐 **Dashboard**\n${dashboardUrl}`,
-      ephemeral: true,
-    });
+      await interaction.reply({
+        content: note
+          ? `🌐 **Dashboard**\n${dashboardUrl}\n${note}`
+          : `🌐 **Dashboard**\n${dashboardUrl}`,
+        ephemeral: true,
+      });
 
-    console.log(`🌐 ${interaction.user.tag} requested the dashboard link`);
+      console.log(`🌐 ${interaction.user.tag} requested the dashboard link`);
+    } catch (error) {
+      console.error("❌ Error in dashboard command:", error);
+      try {
+        await interaction.reply({
+          content: "❌ An error occurred while retrieving the dashboard URL.",
+          ephemeral: true,
+        });
+      } catch (replyError) {
+        console.error("❌ Failed to send error reply:", replyError);
+      }
+    }
   }
 
   // Invite command
