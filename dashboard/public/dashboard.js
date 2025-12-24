@@ -463,8 +463,21 @@ async function loadGuildStats() {
   }
 
   try {
-    const response = await fetch(`/api/guild/${currentGuildId}/stats`);
-    const stats = await response.json();
+    const [statsRes, channelsRes] = await Promise.all([
+      fetch(`/api/guild/${currentGuildId}/stats`),
+      fetch(`/api/guild/${currentGuildId}/channels`),
+    ]);
+    const stats = await statsRes.json();
+
+    // Update availableChannels so we can resolve channel names in the stats view
+    if (channelsRes && channelsRes.ok) {
+      try {
+        const chans = await channelsRes.json();
+        availableChannels = Array.isArray(chans.channels) ? chans.channels : [];
+      } catch (_) {
+        // ignore parse errors
+      }
+    }
 
     const content = document.getElementById("statsContent");
 
@@ -537,12 +550,15 @@ async function loadGuildStats() {
                           channels.length > 0
                             ? channels
                                 .map(
-                                  ([channelId, count]) => `
-                            <div class="d-flex justify-content-between mb-2">
-                                <span><i class="bi bi-hash"></i> ${channelId}</span>
-                                <span class="badge bg-success">${count} translations</span>
-                            </div>
-                        `
+                                  ([channelId, count]) => {
+                                    const name = channelDisplayName(channelId);
+                                    return `
+                                      <div class="d-flex justify-content-between mb-2">
+                                        <span><i class="bi bi-hash"></i> ${name} <small class="text-muted">(${channelId})</small></span>
+                                        <span class="badge bg-success">${count} translations</span>
+                                      </div>
+                                    `;
+                                  }
                                 )
                                 .join("")
                             : '<p class="text-muted">No data yet</p>'
