@@ -419,6 +419,125 @@ app.get(
   }
 );
 
+// API: Get Tracking configuration for a guild
+app.get(
+  "/api/guild/:guildId/tracking-config",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      const { guildId } = req.params;
+
+      // Verify permission
+      const userGuilds = req.user.guilds || [];
+      const hasPermission = userGuilds.some(
+        (g) => g.id === guildId && (g.permissions & 0x20) === 0x20
+      );
+      if (!hasPermission) {
+        return res
+          .status(403)
+          .json({ error: "No permission to manage this server" });
+      }
+
+      const configPath = join(
+        DATA_DIR,
+        "servers",
+        guildId,
+        "tracking-config.json"
+      );
+      const defaults = {
+        enabled: false,
+        channelId: null,
+        ignoredChannels: [],
+        events: {
+          messages: true,
+          members: true,
+          voice: true,
+          reactions: true,
+          channels: true,
+          userUpdates: true,
+          channelUpdates: true,
+          roles: true,
+          guild: true,
+          threads: true,
+          scheduledEvents: true,
+          stickers: true,
+          webhooks: true,
+          integrations: true,
+          invites: true,
+          stageInstances: true,
+          moderationRules: true,
+          interactions: true,
+        },
+      };
+      const config = readJSON(configPath, defaults);
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// API: Update Tracking configuration for a guild
+app.post(
+  "/api/guild/:guildId/tracking-config",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const { enabled, channelId, ignoredChannels, events } = req.body || {};
+
+      // Verify permission
+      const userGuilds = req.user.guilds || [];
+      const hasPermission = userGuilds.some(
+        (g) => g.id === guildId && (g.permissions & 0x20) === 0x20
+      );
+      if (!hasPermission) {
+        return res
+          .status(403)
+          .json({ error: "No permission to manage this server" });
+      }
+
+      const configPath = join(
+        DATA_DIR,
+        "servers",
+        guildId,
+        "tracking-config.json"
+      );
+      const current = readJSON(configPath, {});
+      const next = {
+        enabled: !!enabled,
+        channelId: channelId || null,
+        ignoredChannels: Array.isArray(ignoredChannels)
+          ? Array.from(new Set(ignoredChannels.filter(Boolean)))
+          : [],
+        events: typeof events === "object" && events !== null ? events : current.events || {},
+      };
+      writeJSON(configPath, next);
+      res.json({ success: true, message: "Tracking configuration saved." });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Trigger bot to reload Tracking config immediately
+app.post("/api/tracking/reload", isAuthenticated, async (req, res) => {
+  try {
+    const r = await fetch(
+      `http://127.0.0.1:${CONTROL_PORT}/control/reload-tracking`,
+      {
+        method: "POST",
+        headers: CONTROL_TOKEN ? { "x-control-token": CONTROL_TOKEN } : undefined,
+      }
+    );
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status).json(data || { error: "Failed" });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // API: Update Twitch configuration for a guild
 app.post(
   "/api/guild/:guildId/twitch-config",

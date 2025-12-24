@@ -152,6 +152,16 @@ function startControlApi() {
     }
   });
 
+  // Reload tracking configuration immediately
+  app.post("/control/reload-tracking", checkAuth, (req, res) => {
+    try {
+      loadTrackingData(true);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Bind to localhost only for safety
   app.listen(CONTROL_PORT, "127.0.0.1", () => {
     logger.info(`Control API listening on 127.0.0.1:${CONTROL_PORT}`);
@@ -659,7 +669,7 @@ function formatServerInfo(guildId) {
 }
 
 // Load tracking data from all server config files
-function loadTrackingData() {
+function loadTrackingData(suppressLog = false) {
   if (!fileOps.exists(SERVERS_DIR)) {
     return;
   }
@@ -717,11 +727,13 @@ function loadTrackingData() {
       }
     });
 
-    logConfigurationStatus(
-      "tracking configuration",
-      loadedCount,
-      loadedServers
-    );
+    if (!suppressLog) {
+      logConfigurationStatus(
+        "tracking configuration",
+        loadedCount,
+        loadedServers
+      );
+    }
   } catch (error) {
     logger.error(`Error loading tracking data: ${error.message}`);
   }
@@ -1343,6 +1355,15 @@ client.once("clientReady", () => {
       "⚠️ Twitch notifications disabled (missing TWITCH_CLIENT_ID or TWITCH_ACCESS_TOKEN in .env)"
     );
   }
+
+  // Periodically reload tracking configuration written by dashboard
+  setInterval(() => {
+    try {
+      loadTrackingData(true);
+    } catch (error) {
+      logger.error(`Failed to reload tracking config: ${error.message}`);
+    }
+  }, 30000);
 
   // Set initial rich presence
   updateRichPresence();

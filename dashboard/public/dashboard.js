@@ -172,6 +172,16 @@ function updateServerHeaders() {
     twitchHeader.style.display = "block";
   }
 
+  // Update Tracking page header
+  const trackingIcon = document.getElementById("trackingServerIcon");
+  const trackingName = document.getElementById("trackingServerName");
+  const trackingHeader = document.getElementById("trackingServerHeader");
+  if (trackingIcon && trackingName && trackingHeader) {
+    trackingIcon.src = iconUrl;
+    trackingName.textContent = currentGuild.name;
+    trackingHeader.style.display = "block";
+  }
+
   // Update sidebar current server display
   const sidebarDisplay = document.getElementById("currentServerDisplay");
   const sidebarIcon = document.getElementById("sidebarServerIcon");
@@ -207,6 +217,7 @@ function updateServerHeaders() {
   document.getElementById("serverSwitcher").innerHTML = switcherHTML;
   document.getElementById("statsServerSwitcher").innerHTML = switcherHTML;
   document.getElementById("twitchServerSwitcher").innerHTML = switcherHTML;
+  document.getElementById("trackingServerSwitcher").innerHTML = switcherHTML;
 
   // Update server card active states
   updateServerCardStates();
@@ -549,17 +560,15 @@ async function loadGuildStats() {
                         ${
                           channels.length > 0
                             ? channels
-                                .map(
-                                  ([channelId, count]) => {
-                                    const name = channelDisplayName(channelId);
-                                    return `
+                                .map(([channelId, count]) => {
+                                  const name = channelDisplayName(channelId);
+                                  return `
                                       <div class="d-flex justify-content-between mb-2">
                                         <span><i class="bi bi-hash"></i> ${name} <small class="text-muted">(${channelId})</small></span>
                                         <span class="badge bg-success">${count} translations</span>
                                       </div>
                                     `;
-                                  }
-                                )
+                                })
                                 .join("")
                             : '<p class="text-muted">No data yet</p>'
                         }
@@ -904,7 +913,7 @@ function showPage(pageName) {
   document.querySelector(`[data-page="${pageName}"]`)?.classList.add("active");
 
   // Pages that require server selection
-  const serverRequiredPages = ["translation", "stats", "twitch"];
+  const serverRequiredPages = ["translation", "stats", "twitch", "tracking"];
 
   if (serverRequiredPages.includes(pageName)) {
     if (!currentGuildId) {
@@ -929,6 +938,8 @@ function showPage(pageName) {
       loadGuildStats();
     } else if (pageName === "twitch") {
       loadTwitchContent();
+    } else if (pageName === "tracking") {
+      loadTrackingContent();
     }
   }
 
@@ -1090,6 +1101,237 @@ async function loadTwitchContent() {
     renderStreamerList();
   } catch (error) {
     console.error("Error loading guilds:", error);
+  }
+}
+
+// Load Tracking content for selected guild
+async function loadTrackingContent() {
+  if (!currentGuildId) {
+    document.getElementById("trackingContent").innerHTML =
+      '<p class="text-muted">Select a server first</p>';
+    return;
+  }
+
+  const content = document.getElementById("trackingContent");
+  content.innerHTML = `
+    <div class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  `;
+
+  try {
+    const [cfgRes, chanRes] = await Promise.all([
+      fetch(`/api/guild/${currentGuildId}/tracking-config`),
+      fetch(`/api/guild/${currentGuildId}/channels`),
+    ]);
+
+    const cfg = await cfgRes.json();
+    let chans = { channels: [] };
+    if (chanRes.ok) {
+      chans = await chanRes.json();
+    }
+
+    const channels = Array.isArray(chans.channels) ? chans.channels : [];
+    const selected = cfg.channelId || "";
+    const enabled = !!cfg.enabled;
+    const ignored = Array.isArray(cfg.ignoredChannels) ? cfg.ignoredChannels : [];
+    const events = typeof cfg.events === "object" && cfg.events !== null ? cfg.events : {};
+
+    const channelOptions = [
+      `<option value="">Select a channel...</option>`,
+      ...channels.map(
+        (c) => `<option value="${c.id}" ${selected === c.id ? "selected" : ""}>#${c.name}</option>`
+      ),
+    ].join("");
+
+    const eventDefs = [
+      ["messages", "Messages"],
+      ["members", "Members"],
+      ["voice", "Voice"],
+      ["reactions", "Reactions"],
+      ["channels", "Channels"],
+      ["userUpdates", "User Updates"],
+      ["channelUpdates", "Channel Updates"],
+      ["roles", "Roles"],
+      ["guild", "Guild"],
+      ["threads", "Threads"],
+      ["scheduledEvents", "Scheduled Events"],
+      ["stickers", "Stickers"],
+      ["webhooks", "Webhooks"],
+      ["integrations", "Integrations"],
+      ["invites", "Invites"],
+      ["stageInstances", "Stage Instances"],
+      ["moderationRules", "Moderation Rules"],
+      ["interactions", "Interactions"],
+    ];
+
+    function renderEventToggles() {
+      const grid = document.getElementById("trackingEventGrid");
+      if (!grid) return;
+      grid.innerHTML = eventDefs
+        .map(([key, label]) => {
+          const checked = events[key] !== false; // default true
+          const id = `evt_${key}`;
+          return `
+            <div class="form-check form-switch col-md-4 mb-2">
+              <input class="form-check-input" type="checkbox" id="${id}" ${checked ? "checked" : ""} onchange="toggleTrackingEvent('${key}', this.checked)">
+              <label class="form-check-label" for="${id}">${label}</label>
+            </div>`;
+        })
+        .join("");
+    }
+
+    window._trackingState = { enabled, selected, ignored: [...ignored], events: { ...events } };
+
+    content.innerHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <div class="stat-card">
+            <h5><i class="bi bi-gear"></i> Tracking Settings</h5>
+            <hr>
+            <div class="mb-3 d-flex align-items-center justify-content-between">
+              <div>
+                <label class="form-label fw-bold">Enabled</label>
+                <small class="text-muted d-block">Toggle tracking for this server</small>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="trackingEnabled" ${enabled ? "checked" : ""}>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-hash"></i> Log Channel</label>
+              <select id="trackingChannel" class="form-select">${channelOptions}</select>
+              <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Channel where tracking logs are posted</small>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <h5><i class="bi bi-list-check"></i> Events to Track</h5>
+            <hr>
+            <div id="trackingEventGrid" class="row"></div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0"><i class="bi bi-hash"></i> Ignored Channels</h5>
+            </div>
+            <hr>
+            <div id="ignoredChannelsList"></div>
+            <div class="mt-3">
+              <label class="form-label fw-bold">Add Channel</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                <select class="form-select" id="ignoredChannelPicker">
+                  <option value="">Select a channel...</option>
+                  ${channels.map((c) => `<option value="${c.id}">#${c.name}</option>`).join("")}
+                </select>
+                <button class="btn btn-primary" onclick="addIgnoredChannelFromDropdown()"><i class="bi bi-plus"></i> Add</button>
+              </div>
+              <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Messages from these channels will not be logged</small>
+            </div>
+          </div>
+
+          <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="mb-1"><i class="bi bi-floppy"></i> Save Changes</h5>
+              <small class="text-muted">Save tracking configuration</small>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" onclick="reloadTrackingConfigNow()"><i class="bi bi-arrow-clockwise"></i> Reload Config</button>
+              <button class="btn btn-success btn-lg" onclick="saveTrackingConfig()"><i class="bi bi-check-circle"></i> Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    renderEventToggles();
+    renderIgnoredChannels();
+  } catch (error) {
+    console.error("Error loading tracking:", error);
+    content.innerHTML = `<div class="alert alert-danger">Failed to load Tracking settings: ${error.message}</div>`;
+  }
+}
+
+function renderIgnoredChannels() {
+  const list = document.getElementById("ignoredChannelsList");
+  if (!list) return;
+  const items = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  if (items.length === 0) {
+    list.innerHTML = '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No ignored channels</div>';
+    return;
+  }
+  list.innerHTML = items.map((id) => {
+    const name = channelDisplayName(id);
+    return `
+      <div class="channel-toggle" data-channel-id="${id}">
+        <div><i class="bi bi-slash-circle text-muted me-1"></i> <strong>${name}</strong> <small class="text-muted">(${id})</small></div>
+        <button class="btn btn-sm btn-outline-danger" onclick="removeIgnoredChannel('${id}')"><i class="bi bi-trash"></i></button>
+      </div>`;
+  }).join("");
+}
+
+function addIgnoredChannelFromDropdown() {
+  const dd = document.getElementById("ignoredChannelPicker");
+  const channelId = dd?.value;
+  if (!channelId) return alert("Please select a channel");
+  const cur = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  if (!cur.includes(channelId)) {
+    window._trackingState.ignored = [...cur, channelId];
+    renderIgnoredChannels();
+  }
+}
+
+function removeIgnoredChannel(channelId) {
+  const cur = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+  window._trackingState.ignored = cur.filter((c) => c !== channelId);
+  renderIgnoredChannels();
+}
+
+function toggleTrackingEvent(key, enabled) {
+  if (!window._trackingState) return;
+  window._trackingState.events = window._trackingState.events || {};
+  window._trackingState.events[key] = !!enabled;
+}
+
+async function saveTrackingConfig() {
+  try {
+    const enabled = !!document.getElementById("trackingEnabled")?.checked;
+    const channelId = document.getElementById("trackingChannel")?.value || null;
+    const ignoredChannels = Array.isArray(window._trackingState?.ignored) ? window._trackingState.ignored : [];
+    const events = typeof window._trackingState?.events === "object" ? window._trackingState.events : {};
+    const r = await fetch(`/api/guild/${currentGuildId}/tracking-config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled, channelId, ignoredChannels, events }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Failed to save tracking config");
+    const success = document.createElement("div");
+    success.className = "alert alert-success mt-3";
+    success.innerHTML = `<i class="bi bi-check-circle"></i> ${data.message || 'Saved.'}`;
+    document.getElementById("trackingContent").prepend(success);
+    setTimeout(() => success.remove(), 4000);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function reloadTrackingConfigNow() {
+  try {
+    const r = await fetch(`/api/tracking/reload`, { method: "POST" });
+    if (!r.ok) throw new Error((await r.json()).error || "Failed to reload");
+    const a = document.createElement("div");
+    a.className = "alert alert-success mt-3";
+    a.innerHTML = '<i class="bi bi-check-circle"></i> Reloaded Tracking configuration.';
+    document.getElementById("trackingContent").prepend(a);
+    setTimeout(() => a.remove(), 3000);
+  } catch (e) {
+    alert(e.message);
   }
 }
 
