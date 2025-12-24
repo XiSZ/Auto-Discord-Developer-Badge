@@ -95,10 +95,7 @@ function selectGuild(guildId, guildName) {
   currentGuildName = guildName;
 
   // Update active state
-  document.querySelectorAll(".server-card").forEach((card) => {
-    card.classList.remove("active");
-  });
-  event.target.closest(".server-card").classList.add("active");
+  updateServerCardStates();
 
   // Update server headers
   updateServerHeaders();
@@ -106,6 +103,7 @@ function selectGuild(guildId, guildName) {
   // Load guild data
   loadGuildConfig();
   loadGuildStats();
+  loadTwitchContent();
 
   // Show translation page
   showPage("translation");
@@ -121,14 +119,44 @@ function updateServerHeaders() {
     : "https://cdn.discordapp.com/embed/avatars/0.png";
 
   // Update translation page header
-  document.getElementById("currentServerIcon").src = iconUrl;
-  document.getElementById("currentServerName").textContent = currentGuild.name;
-  document.getElementById("serverHeader").style.display = "block";
+  const translationIcon = document.getElementById("currentServerIcon");
+  const translationName = document.getElementById("currentServerName");
+  const translationHeader = document.getElementById("serverHeader");
+  if (translationIcon && translationName && translationHeader) {
+    translationIcon.src = iconUrl;
+    translationName.textContent = currentGuild.name;
+    translationHeader.style.display = "block";
+  }
 
   // Update stats page header
-  document.getElementById("statsServerIcon").src = iconUrl;
-  document.getElementById("statsServerName").textContent = currentGuild.name;
-  document.getElementById("statsServerHeader").style.display = "block";
+  const statsIcon = document.getElementById("statsServerIcon");
+  const statsName = document.getElementById("statsServerName");
+  const statsHeader = document.getElementById("statsServerHeader");
+  if (statsIcon && statsName && statsHeader) {
+    statsIcon.src = iconUrl;
+    statsName.textContent = currentGuild.name;
+    statsHeader.style.display = "block";
+  }
+
+  // Update Twitch page header
+  const twitchIcon = document.getElementById("twitchServerIcon");
+  const twitchName = document.getElementById("twitchServerName");
+  const twitchHeader = document.getElementById("twitchServerHeader");
+  if (twitchIcon && twitchName && twitchHeader) {
+    twitchIcon.src = iconUrl;
+    twitchName.textContent = currentGuild.name;
+    twitchHeader.style.display = "block";
+  }
+
+  // Update sidebar current server display
+  const sidebarDisplay = document.getElementById("currentServerDisplay");
+  const sidebarIcon = document.getElementById("sidebarServerIcon");
+  const sidebarName = document.getElementById("sidebarServerName");
+  if (sidebarDisplay && sidebarIcon && sidebarName) {
+    sidebarIcon.src = iconUrl;
+    sidebarName.textContent = currentGuild.name;
+    sidebarDisplay.style.display = "block";
+  }
 
   // Populate server switcher dropdowns
   const switcherHTML = guilds
@@ -143,8 +171,7 @@ function updateServerHeaders() {
              onclick="switchToServer('${guild.id}', '${guild.name.replace(
         /'/g,
         "\\'"
-      )}')
-             event.preventDefault(); return false;">
+      )}'); event.preventDefault(); return false;">
             <img src="${gIcon}" width="20" height="20" class="rounded-circle me-2">
             ${guild.name}
           </a>
@@ -155,6 +182,29 @@ function updateServerHeaders() {
 
   document.getElementById("serverSwitcher").innerHTML = switcherHTML;
   document.getElementById("statsServerSwitcher").innerHTML = switcherHTML;
+  document.getElementById("twitchServerSwitcher").innerHTML = switcherHTML;
+
+  // Update server card active states
+  updateServerCardStates();
+}
+
+// Update server card active states
+function updateServerCardStates() {
+  document.querySelectorAll(".server-card").forEach((card) => {
+    card.classList.remove("active");
+  });
+
+  if (currentGuildId) {
+    document.querySelectorAll(".server-card").forEach((card) => {
+      const cardElement = card.querySelector(`[onclick*="${currentGuildId}"]`);
+      if (
+        cardElement ||
+        card.getAttribute("onclick")?.includes(currentGuildId)
+      ) {
+        card.classList.add("active");
+      }
+    });
+  }
 }
 
 // Switch to a different server
@@ -168,11 +218,24 @@ function switchToServer(guildId, guildName) {
   // Reload data for new server
   loadGuildConfig();
   loadGuildStats();
+  loadTwitchContent();
 }
 
 // Load guild translation config
 async function loadGuildConfig() {
   const content = document.getElementById("translationContent");
+
+  if (!currentGuildId) {
+    content.innerHTML = `
+      <div class="alert alert-warning">
+        <i class="bi bi-info-circle"></i>
+        <strong>No server selected.</strong> Please select a server from the 
+        <a href="#" onclick="showPage('servers'); return false;" class="alert-link">Servers page</a> first.
+      </div>
+    `;
+    return;
+  }
+
   content.innerHTML = `
     <div class="d-flex justify-content-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -361,6 +424,20 @@ async function loadGuildConfig() {
 
 // Load guild statistics
 async function loadGuildStats() {
+  if (!currentGuildId) {
+    const content = document.getElementById("statsContent");
+    if (content) {
+      content.innerHTML = `
+        <div class="alert alert-warning">
+          <i class="bi bi-info-circle"></i>
+          <strong>No server selected.</strong> Please select a server from the 
+          <a href="#" onclick="showPage('servers'); return false;" class="alert-link">Servers page</a> first.
+        </div>
+      `;
+    }
+    return;
+  }
+
   try {
     const response = await fetch(`/api/guild/${currentGuildId}/stats`);
     const stats = await response.json();
@@ -786,6 +863,40 @@ function showPage(pageName) {
   document.getElementById(`${pageName}Page`).style.display = "block";
   document.querySelector(`[data-page="${pageName}"]`)?.classList.add("active");
 
+  // Pages that require server selection
+  const serverRequiredPages = ["translation", "stats", "twitch"];
+
+  if (serverRequiredPages.includes(pageName)) {
+    if (!currentGuildId) {
+      // Show message to select a server
+      const pageContent = document.getElementById(`${pageName}Content`);
+      if (pageContent) {
+        pageContent.innerHTML = `
+          <div class="alert alert-warning">
+            <i class="bi bi-info-circle"></i>
+            <strong>No server selected.</strong> Please select a server from the 
+            <a href="#" onclick="showPage('servers'); return false;" class="alert-link">Servers page</a> first.
+          </div>
+        `;
+      }
+      return;
+    }
+
+    // Load content for server-dependent pages
+    if (pageName === "translation") {
+      loadGuildConfig();
+    } else if (pageName === "stats") {
+      loadGuildStats();
+    } else if (pageName === "twitch") {
+      loadTwitchContent();
+    }
+  }
+
+  // Maintain server card active state when returning to servers page
+  if (pageName === "servers" && currentGuildId) {
+    updateServerCardStates();
+  }
+
   // Load invite link when invite page is shown
   if (pageName === "invite") {
     loadInviteLink();
@@ -832,6 +943,69 @@ function openInviteLink() {
   }
 }
 
+// Load Twitch content for selected guild
+async function loadTwitchContent() {
+  if (!currentGuildId) {
+    document.getElementById("twitchContent").innerHTML =
+      '<p class="text-muted">Select a server first</p>';
+    return;
+  }
+
+  const content = document.getElementById("twitchContent");
+  content.innerHTML = `
+    <div class="row">
+      <div class="col-12">
+        <div class="stat-card">
+          <h5><i class="bi bi-broadcast"></i> Twitch Integration</h5>
+          <hr>
+          <p class="text-muted">
+            <i class="bi bi-info-circle"></i> 
+            Twitch notifications are configured using Discord slash commands.
+          </p>
+          
+          <div class="alert alert-info">
+            <h6 class="alert-heading"><i class="bi bi-terminal"></i> How to Configure Twitch Alerts</h6>
+            <p class="mb-2">Use the following commands in your Discord server:</p>
+            <ul class="mb-2">
+              <li><code>/twitch-notify add &lt;streamer&gt; [channel]</code> - Monitor a Twitch streamer</li>
+              <li><code>/twitch-notify remove &lt;streamer&gt;</code> - Stop monitoring a streamer</li>
+              <li><code>/twitch-notify list</code> - View all monitored streamers</li>
+              <li><code>/twitch-notify channel &lt;channel&gt;</code> - Set notification channel</li>
+            </ul>
+            <p class="mb-0">
+              <strong>Note:</strong> You need to run these commands in Discord. 
+              The bot will check for live streams every 5 minutes and send notifications automatically.
+            </p>
+          </div>
+
+          <div class="card bg-light border-0 mt-3">
+            <div class="card-body">
+              <h6><i class="bi bi-gear"></i> Requirements</h6>
+              <ul class="mb-0">
+                <li>Bot must have <strong>Manage Server</strong> or <strong>Administrator</strong> permissions</li>
+                <li>Twitch API credentials must be configured on the bot</li>
+                <li>Notifications require a text channel where the bot can send messages</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card bg-light border-0 mt-3">
+            <div class="card-body">
+              <h6><i class="bi bi-lightning-charge"></i> Features</h6>
+              <ul class="mb-0">
+                <li>Real-time notifications when streamers go live</li>
+                <li>Automatic stream status checking every 5 minutes</li>
+                <li>Rich embed with stream title, game, and viewer count</li>
+                <li>Direct link to stream in notification</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // Navigation click handlers
 document.addEventListener("DOMContentLoaded", () => {
   checkAuth().then((isAuth) => {
@@ -846,6 +1020,14 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const page = link.getAttribute("data-page");
         if (page) {
+          // Check if page requires server selection
+          const serverRequiredPages = ["translation", "stats", "twitch"];
+          if (serverRequiredPages.includes(page) && !currentGuildId) {
+            // Show alert and redirect to servers page
+            alert("Please select a server first from the Servers page.");
+            showPage("servers");
+            return;
+          }
           showPage(page);
         }
       }

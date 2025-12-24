@@ -176,6 +176,48 @@
           </div>
         </div>
       </div>
+
+      <!-- Current Server Display -->
+      <div class="px-3 mb-3" id="currentServerDisplay" style="display: none">
+        <small class="text-white-50 d-block mb-1">Current Server</small>
+        <div
+          class="card"
+          style="background: rgba(255, 255, 255, 0.1); border: none"
+        >
+          <div class="card-body p-2">
+            <div class="d-flex align-items-center">
+              <img
+                id="sidebarServerIcon"
+                src=""
+                alt=""
+                class="rounded-circle me-2"
+                width="32"
+                height="32"
+              />
+              <div style="flex: 1; min-width: 0">
+                <div
+                  id="sidebarServerName"
+                  style="
+                    color: white;
+                    font-weight: 500;
+                    font-size: 0.85rem;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  "
+                >
+                  None
+                </div>
+                <small
+                  style="color: rgba(255, 255, 255, 0.6); font-size: 0.7rem"
+                  >Selected</small
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <nav>
         <a href="#" class="nav-link active" data-page="servers">
           <i class="bi bi-server"></i> Servers
