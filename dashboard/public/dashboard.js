@@ -286,13 +286,12 @@ function populateSidebarServerSelector() {
 function openSidebarSelector() {
   const selector = document.getElementById("sidebarServerSelector");
   const menu = document.getElementById("sidebarServerMenu");
-  if (!selector || !guilds.length) return;
-  selector.style.display = "block";
-  selector.size = Math.min(guilds.length + 1, 8);
-  selector.focus();
-  if (menu) {
-    menu.style.display = "block";
-    sidebarServerMenuOpen = true;
+  if (!selector || !guilds.length || !menu) return;
+  const nextState = !sidebarServerMenuOpen;
+  menu.style.display = nextState ? "block" : "none";
+  sidebarServerMenuOpen = nextState;
+  if (nextState) {
+    menu.scrollTop = 0;
   }
 }
 
@@ -311,8 +310,6 @@ function selectSidebarGuild(guildId) {
     selectGuild(guild.id, guild.name);
   }
   closeSidebarSelectorMenu();
-  const selector = document.getElementById("sidebarServerSelector");
-  if (selector) selector.style.display = "none";
   if (window.innerWidth <= 768) {
     closeSidebar();
   }
