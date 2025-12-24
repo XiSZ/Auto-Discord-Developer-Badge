@@ -592,24 +592,57 @@ function channelDisplayName(channelId) {
   return channel ? `#${channel.name}` : `#${channelId}`;
 }
 
+// Language display with flag + name + code
+const LANG_MAP = {
+  en: { name: "English", flag: "🇬🇧" },
+  fr: { name: "French", flag: "🇫🇷" },
+  de: { name: "German", flag: "🇩🇪" },
+  es: { name: "Spanish", flag: "🇪🇸" },
+  it: { name: "Italian", flag: "🇮🇹" },
+  ja: { name: "Japanese", flag: "🇯🇵" },
+  ko: { name: "Korean", flag: "🇰🇷" },
+  zh: { name: "Chinese", flag: "🇨🇳" },
+  "zh-cn": { name: "Chinese (Simplified)", flag: "🇨🇳" },
+  "zh-tw": { name: "Chinese (Traditional)", flag: "🇹🇼" },
+  ar: { name: "Arabic", flag: "🇸🇦" },
+  hr: { name: "Croatian", flag: "🇭🇷" },
+  no: { name: "Norwegian", flag: "🇳🇴" },
+  fa: { name: "Persian", flag: "🇮🇷" },
+  ur: { name: "Urdu", flag: "🇵🇰" },
+  ru: { name: "Russian", flag: "🇷🇺" },
+  pt: { name: "Portuguese", flag: "🇵🇹" },
+  nl: { name: "Dutch", flag: "🇳🇱" },
+  sv: { name: "Swedish", flag: "🇸🇪" },
+  pl: { name: "Polish", flag: "🇵🇱" },
+};
+
+function languageDisplay(code) {
+  if (!code) return "🌐 Unknown";
+  const norm = String(code).toLowerCase();
+  const info = LANG_MAP[norm] || LANG_MAP[norm.split("-")[0]];
+  if (!info) return `🌐 ${code}`;
+  return `${info.flag} ${info.name} ${code}`;
+}
+
 function renderLanguageBadges() {
   const container = document.getElementById("languagesList");
   if (!container || !currentConfig) return;
 
-  if (
-    !currentConfig.targetLanguages ||
-    currentConfig.targetLanguages.length === 0
-  ) {
-    container.innerHTML =
-      '<div class="text-muted p-2 border rounded bg-light"><i class="bi bi-info-circle"></i> No languages selected</div>';
-    return;
-  }
-
-  container.innerHTML = currentConfig.targetLanguages
-    .map(
-      (lang) => `
-        <span class="language-badge">
-          <i class="bi bi-translate"></i> ${lang.toUpperCase()}
+                        ${
+                          pairs.length > 0
+                            ? pairs
+                                .map(([pair, count]) => {
+                                  const [from, to] = String(pair).split("->");
+                                  const display = `${languageDisplay(from)} → ${languageDisplay(to)}`;
+                                  return `
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>${display}</strong></span>
+                                <span class="badge bg-primary">${count} translations</span>
+                            </div>`;
+                                })
+                                .join("")
+                            : '<p class="text-muted">No data yet</p>'
+                        }
           <i class="bi bi-x-circle remove" onclick="removeLanguage('${lang}')"></i>
         </span>
       `
