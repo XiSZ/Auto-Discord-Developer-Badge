@@ -39,9 +39,19 @@ async function checkAuth() {
       return false;
     }
     const user = await response.json();
-    document.getElementById(
-      "userInfo"
-    ).textContent = `${user.username}#${user.discriminator}`;
+    
+    // Update username
+    const userInfoEl = document.getElementById("userInfo");
+    if (userInfoEl) {
+      userInfoEl.textContent = user.discriminator === '0' ? user.username : `${user.username}#${user.discriminator}`;
+    }
+    
+    // Update avatar
+    const avatarEl = document.getElementById("userAvatar");
+    if (avatarEl && user.avatar) {
+      avatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+    }
+    
     return true;
   } catch (error) {
     console.error("Auth error:", error);
@@ -49,6 +59,27 @@ async function checkAuth() {
     window.location.href = "/";
     return false;
   }
+}
+
+// Handle sidebar server dropdown change
+function handleSidebarServerChange(guildId) {
+  if (!guildId) return;
+  const guild = guilds.find(g => g.id === guildId);
+  if (guild) {
+    selectGuild(guild.id, guild.name);
+  }
+}
+
+// Populate sidebar server selector
+function populateSidebarServerSelector() {
+  const selector = document.getElementById('sidebarServerSelector');
+  if (!selector || !guilds.length) return;
+  
+  selector.innerHTML = '<option value="" style="background: #2c3e50; color: white;">Choose a server...</option>' +
+    guilds.map(guild => {
+      const selected = guild.id === currentGuildId ? 'selected' : '';
+      return `<option value="${guild.id}" ${selected} style="background: #2c3e50; color: white;">${guild.name}</option>`;
+    }).join('');
 }
 
 // (removed stray commands rendering fragment)
@@ -98,6 +129,9 @@ async function loadGuilds() {
       })
       .join("");
     if (container) container.innerHTML = html;
+    
+    // Populate sidebar server selector
+    populateSidebarServerSelector();
   } catch (error) {
     if (container) {
       container.innerHTML = `
@@ -123,6 +157,12 @@ function selectGuild(guildId, guildName) {
 
   // Update server headers
   updateServerHeaders();
+  
+  // Update sidebar selector
+  const selector = document.getElementById('sidebarServerSelector');
+  if (selector) {
+    selector.value = guildId;
+  }
 
   // Load guild data
   loadGuildConfig();
