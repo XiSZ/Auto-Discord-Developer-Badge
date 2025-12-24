@@ -350,6 +350,27 @@ app.get("/api/debug/control-api", isAuthenticated, async (req, res) => {
   }
 });
 
+// Debug endpoint to check user's OAuth guild list
+app.get("/api/debug/user-guilds", isAuthenticated, async (req, res) => {
+  try {
+    const guilds = req.user.guilds || [];
+    const detailed = guilds.map((g) => ({
+      id: g.id,
+      name: g.name,
+      permissions: g.permissions,
+      hasManageGuild: (g.permissions & 0x20) === 0x20,
+    }));
+
+    res.json({
+      totalGuilds: guilds.length,
+      manageableGuilds: detailed.filter((g) => g.hasManageGuild).length,
+      guilds: detailed,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get bot guild info
 app.get("/api/guild/:guildId/bot-status", isAuthenticated, async (req, res) => {
   try {
@@ -428,11 +449,32 @@ app.get("/api/guild/:guildId/channels", isAuthenticated, async (req, res) => {
 
     // Verify permission
     const userGuilds = req.user.guilds || [];
+    console.log(`[API] Channel request for guild ${guildId}`);
+    console.log(
+      `[API] User guilds in OAuth: ${userGuilds.map((g) => g.id).join(", ")}`
+    );
+
+    const guildInOAuth = userGuilds.find((g) => g.id === guildId);
+    console.log(
+      `[API] Guild ${guildId} in OAuth: ${guildInOAuth ? "YES" : "NO"}`
+    );
+    if (guildInOAuth) {
+      console.log(
+        `[API] Guild ${guildId} permissions: ${guildInOAuth.permissions} (MANAGE_GUILD=0x20)`
+      );
+      console.log(
+        `[API] Has MANAGE_GUILD: ${(guildInOAuth.permissions & 0x20) === 0x20}`
+      );
+    }
+
     const hasPermission = userGuilds.some(
       (g) => g.id === guildId && (g.permissions & 0x20) === 0x20
     );
 
     if (!hasPermission) {
+      console.log(
+        `[API] Denying channel access for guild ${guildId} - no permission`
+      );
       return res
         .status(403)
         .json({ error: "No permission to manage this server" });
