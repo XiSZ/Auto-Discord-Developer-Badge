@@ -5703,19 +5703,36 @@ openInviteBotGuide();
 guideOpened = true;
 
 // Login bot
-client.login(process.env.DISCORD_TOKEN).catch((error) => {
-  logger.error("❌ Unable to login bot:", error);
+if (!process.env.DISCORD_TOKEN) {
+  logger.error("❌ DISCORD_TOKEN is not set in the .env file");
   logger.log(
-    "Please check if your DISCORD_TOKEN is correctly set in the .env file"
+    "Please check your .env file and ensure DISCORD_TOKEN is correctly set"
   );
-
-  // Only open guide if it wasn't already opened
-  if (!guideOpened) {
-    logger.log("\n📖 Opening setup guide to help you configure the bot...");
-    openInviteBotGuide();
-  } else {
-    logger.log("\n📖 Please check the setup guide in your browser for help.");
-  }
-
   setTimeout(() => process.exit(1), 2000);
-});
+  return;
+}
+
+try {
+  client.login(process.env.DISCORD_TOKEN).catch((error) => {
+    logger.error("❌ Unable to login bot:", error);
+    logger.log(
+      "Please check if your DISCORD_TOKEN is correctly set in the .env file"
+    );
+
+    // Only open guide if it wasn't already opened
+    if (!guideOpened) {
+      logger.log("\n📖 Opening setup guide to help you configure the bot...");
+      openInviteBotGuide();
+    } else {
+      logger.log("\n📖 Please check the setup guide in your browser for help.");
+    }
+
+    setTimeout(() => process.exit(1), 2000);
+  });
+} catch (syncError) {
+  logger.error("❌ Synchronous error during login:", syncError);
+  logger.log(
+    "This might indicate an issue with the Discord.js setup or token format"
+  );
+  setTimeout(() => process.exit(1), 2000);
+}
