@@ -1,15 +1,58 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  appendFileSync,
+} from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const rootDir = join(__dirname, "..");
+const logsDir = join(rootDir, "logs");
+
+// Ensure logs directory exists
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
+}
 
 /**
- * Logger utility for consistent, formatted console output
+ * Get current timestamp for logging
+ * @returns {string} Formatted timestamp
  */
+function getTimestamp() {
+  return new Date().toISOString();
+}
+
+/**
+ * Write log entry to file
+ * @param {string} level - Log level (SUCCESS, ERROR, WARN, INFO, LOG)
+ * @param {string} message - Log message
+ */
+function writeToLogFile(level, message) {
+  const timestamp = getTimestamp();
+  const logEntry = `[${timestamp}] ${level}: ${message}\n`;
+  const logFile = join(logsDir, "app.log");
+
+  try {
+    appendFileSync(logFile, logEntry);
+  } catch (error) {
+    // If we can't write to log file, at least log to console
+    console.error(`Failed to write to log file: ${error.message}`);
+  }
+}
+
 export const logger = {
   /**
    * Log success message
    * @param {string} message
    */
   success(message) {
-    console.log(`✅ ${message}`);
+    const formattedMessage = `✅ ${message}`;
+    console.log(formattedMessage);
+    writeToLogFile("SUCCESS", message);
   },
 
   /**
@@ -17,7 +60,9 @@ export const logger = {
    * @param {string} message
    */
   error(message) {
-    console.error(`❌ ${message}`);
+    const formattedMessage = `❌ ${message}`;
+    console.error(formattedMessage);
+    writeToLogFile("ERROR", message);
   },
 
   /**
@@ -25,7 +70,9 @@ export const logger = {
    * @param {string} message
    */
   warn(message) {
-    console.log(`⚠️ ${message}`);
+    const formattedMessage = `⚠️ ${message}`;
+    console.log(formattedMessage);
+    writeToLogFile("WARN", message);
   },
 
   /**
@@ -33,14 +80,18 @@ export const logger = {
    * @param {string} message
    */
   info(message) {
-    console.log(`ℹ️  ${message}`);
+    const formattedMessage = `ℹ️  ${message}`;
+    console.log(formattedMessage);
+    writeToLogFile("INFO", message);
   },
 
   /**
    * Log section divider
    */
   divider() {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    const divider = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+    console.log(divider);
+    writeToLogFile("LOG", divider);
   },
 
   /**
@@ -49,6 +100,7 @@ export const logger = {
    */
   log(message) {
     console.log(message);
+    writeToLogFile("LOG", message);
   },
 };
 
@@ -113,15 +165,15 @@ export function logConfigurationStatus(
   loadedServers
 ) {
   if (loadedCount > 0) {
-    console.log(
+    logger.log(
       `✅ Loaded ${featureName} for ${loadedCount} server(s):\n   ${loadedServers.join(
         "\n   "
       )}`
     );
-    console.log(`✅ ${featureName.split(" ")[0]} enabled`);
+    logger.success(`${featureName.split(" ")[0]} enabled`);
   } else {
-    console.log(
-      `⚠️ ${featureName.split(" ")[0]} disabled (no servers configured)`
+    logger.warn(
+      `${featureName.split(" ")[0]} disabled (no servers configured)`
     );
   }
 }

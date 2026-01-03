@@ -1,7 +1,8 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import fs from 'fs';
-import dotenv from 'dotenv';
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import fs from "fs";
+import dotenv from "dotenv";
+import { logger } from "./utils.js";
 
 dotenv.config();
 
@@ -10,9 +11,9 @@ const __dirname = dirname(__filename);
 
 // Generate HTML with environment variables
 function generateSetupGuide() {
-  const clientId = process.env.CLIENT_ID || 'YOUR_CLIENT_ID';
-  const guildId = process.env.GUILD_ID || 'YOUR_GUILD_ID';
-  
+  const clientId = process.env.CLIENT_ID || "YOUR_CLIENT_ID";
+  const guildId = process.env.GUILD_ID || "YOUR_GUILD_ID";
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,12 +116,16 @@ function generateSetupGuide() {
             Guild ID: <code>${guildId}</code>
         </div>
 
-        ${clientId === 'YOUR_CLIENT_ID' ? `
+        ${
+          clientId === "YOUR_CLIENT_ID"
+            ? `
         <div class="warning">
             <strong>⚠️ Configuration Needed!</strong><br>
             Please update your <code>.env</code> file with your actual Discord bot credentials before proceeding.
         </div>
-        ` : ''}
+        `
+            : ""
+        }
 
         <h2>Step 1: Use Invite Link</h2>
         <p>Click the button below to invite the bot to your server (requires Manage Server permission):</p>
@@ -129,7 +134,11 @@ function generateSetupGuide() {
             <a href="https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2147483648&scope=bot%20applications.commands" 
                class="button" 
                target="_blank"
-               ${clientId === 'YOUR_CLIENT_ID' ? 'onclick="alert(\'Please configure your .env file first!\'); return false;"' : ''}>
+               ${
+                 clientId === "YOUR_CLIENT_ID"
+                   ? "onclick=\"alert('Please configure your .env file first!'); return false;\""
+                   : ""
+               }>
                 🚀 Invite Bot to Server
             </a>
         </div>
@@ -247,10 +256,10 @@ GUILD_ID=${guildId}
 
 // Write the generated HTML to file
 const htmlContent = generateSetupGuide();
-const outputPath = join(__dirname, '..', 'invite-bot.html');
-fs.writeFileSync(outputPath, htmlContent, 'utf8');
+const outputPath = join(__dirname, "..", "invite-bot.html");
+fs.writeFileSync(outputPath, htmlContent, "utf8");
 
-console.log('✅ Setup guide generated successfully!');
-console.log(`📄 File: ${outputPath}`);
-console.log(`🔗 Client ID: ${process.env.CLIENT_ID || 'Not configured'}`);
-console.log(`🔗 Guild ID: ${process.env.GUILD_ID || 'Not configured'}`);
+logger.success("Setup guide generated successfully!");
+logger.log(`📄 File: ${outputPath}`);
+logger.log(`🔗 Client ID: ${process.env.CLIENT_ID || "Not configured"}`);
+logger.log(`🔗 Guild ID: ${process.env.GUILD_ID || "Not configured"}`);

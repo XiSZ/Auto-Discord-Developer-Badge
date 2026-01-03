@@ -1,5 +1,6 @@
 import { REST, Routes, SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
+import { logger } from "./utils.js";
 
 dotenv.config();
 
@@ -1026,7 +1027,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
   try {
-    console.log("🔄 Starting to register slash commands...");
+    logger.log("🔄 Starting to register slash commands...");
 
     const hasGuildTarget =
       process.env.GUILD_ID && process.env.GUILD_ID.trim().length > 0;
@@ -1035,7 +1036,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
       "true";
 
     if (hasGuildTarget) {
-      console.log(
+      logger.log(
         `🎯 Registering commands to guild ${process.env.GUILD_ID} (instant updates)`
       );
       await rest.put(
@@ -1047,19 +1048,19 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
       );
 
       if (registerGlobalWhenGuild) {
-        console.log(
+        logger.log(
           "🌐 REGISTER_GLOBAL_WHEN_GUILD=true — also registering globally (may show duplicates in UI)"
         );
         await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
           body: commands,
         });
       } else {
-        console.log(
+        logger.log(
           "🌐 REGISTER_GLOBAL_WHEN_GUILD=false — skipping global registration to avoid duplicates"
         );
       }
     } else {
-      console.log(
+      logger.log(
         "🌐 No GUILD_ID set; registering commands globally (may take up to 1 hour)"
       );
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
@@ -1067,13 +1068,13 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
       });
     }
 
-    console.log("✅ Successfully registered slash commands!");
-    console.log(`📝 Registered ${commands.length} command(s):`);
+    logger.success("Successfully registered slash commands!");
+    logger.log(`📝 Registered ${commands.length} command(s):`);
     commands.forEach((cmd) =>
-      console.log(`   - /${cmd.name}: ${cmd.description}`)
+      logger.log(`   - /${cmd.name}: ${cmd.description}`)
     );
-    console.log(
-      `\nℹ️ Mode: ${
+    logger.info(
+      `Mode: ${
         hasGuildTarget ? "Guild" : "Global"
       } | Global also registered with guild: ${registerGlobalWhenGuild}`
     );
@@ -1087,18 +1088,18 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
       );
     }
   } catch (error) {
-    console.error("❌ Error registering slash commands:", error);
+    logger.error("Error registering slash commands:", error);
 
     if (error.code === 50001) {
-      console.log("\n⚠️ Error reason: Bot missing permissions");
-      console.log("Solution:");
-      console.log("1. Confirm the bot has been added to the server");
-      console.log('2. Confirm the bot has "applications.commands" permission');
+      logger.warn("Error reason: Bot missing permissions");
+      logger.log("Solution:");
+      logger.log("1. Confirm the bot has been added to the server");
+      logger.log('2. Confirm the bot has "applications.commands" permission');
     } else if (error.code === "TOKEN_INVALID") {
-      console.log("\n⚠️ Error reason: Invalid Discord Token");
-      console.log("Solution:");
-      console.log("1. Check if DISCORD_TOKEN in .env file is correct");
-      console.log("2. Go to Discord Developer Portal to regenerate Token");
+      logger.warn("Error reason: Invalid Discord Token");
+      logger.log("Solution:");
+      logger.log("1. Check if DISCORD_TOKEN in .env file is correct");
+      logger.log("2. Go to Discord Developer Portal to regenerate Token");
     }
   }
 })();

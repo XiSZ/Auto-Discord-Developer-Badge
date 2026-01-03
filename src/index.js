@@ -15,6 +15,7 @@ import {
   writeFileSync,
   mkdirSync,
   readdirSync,
+  unlinkSync,
 } from "fs";
 import TwitchAPI from "./twitch-api.js";
 import express from "express";
@@ -103,9 +104,29 @@ const translationConfig = new Map(); // Map<guildId, { channels: Set<channelId>,
 // Translation statistics per guild
 const translationStats = new Map(); // Map<guildId, { total: number, byLanguagePair: Map<string, number>, byChannel: Map<channelId, number> }>
 
-// Persistent data directory - use Railway volume if available, otherwise local
-const DATA_DIR =
-  process.env.RAILWAY_VOLUME_MOUNT_PATH || join(__dirname, "..", "data");
+// Helper function to check if a directory is writable
+function isDirectoryWritable(dirPath) {
+  try {
+    // Try to create a test file to check write permissions
+    const testFile = join(dirPath, ".write-test");
+    writeFileSync(testFile, "test");
+    unlinkSync(testFile); // Clean up
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Determine data directory - prefer configured paths if writable, otherwise use local
+let DATA_DIR;
+if (
+  process.env.RAILWAY_VOLUME_MOUNT_PATH &&
+  isDirectoryWritable(process.env.RAILWAY_VOLUME_MOUNT_PATH)
+) {
+  DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+} else {
+  DATA_DIR = join(__dirname, "..", "data");
+}
 const SERVERS_DIR = join(DATA_DIR, "servers");
 const BADGE_SETTINGS_PATH = join(DATA_DIR, "badge-settings.json");
 const DISABLED_COMMANDS_PATH = join(DATA_DIR, "disabled-commands.json");
@@ -142,14 +163,14 @@ function startControlApi() {
   const CONTROL_PORT = Number(process.env.BOT_CONTROL_PORT || 3210);
   const TOKEN = process.env.CONTROL_TOKEN || process.env.SESSION_SECRET || "";
 
-  console.log("[Control API] Starting with configuration:");
-  console.log(`[Control API] CONTROL_PORT: ${CONTROL_PORT}`);
-  console.log(
+  logger.log("[Control API] Starting with configuration:");
+  logger.log(`[Control API] CONTROL_PORT: ${CONTROL_PORT}`);
+  logger.log(
     `[Control API] TOKEN: ${
       TOKEN ? "SET (length: " + TOKEN.length + ")" : "NOT SET"
     }`
   );
-  console.log(
+  logger.log(
     `[Control API] SESSION_SECRET: ${
       process.env.SESSION_SECRET ? "SET" : "NOT SET"
     }`
@@ -160,15 +181,15 @@ function startControlApi() {
 
   function checkAuth(req, res, next) {
     if (!TOKEN) {
-      console.log("[Control API] No token configured, allowing all requests");
+      logger.log("[Control API] No token configured, allowing all requests");
       return next();
     }
     const tok = req.headers["x-control-token"];
     if (tok && tok === TOKEN) {
-      console.log("[Control API] Auth successful");
+      logger.log("[Control API] Auth successful");
       return next();
     }
-    console.log(
+    logger.log(
       `[Control API] Auth failed - received: "${tok}", expected: "${TOKEN}"`
     );
     return res.status(401).json({ error: "Unauthorized" });
@@ -176,7 +197,7 @@ function startControlApi() {
 
   // Health check endpoint (no auth required)
   app.get("/control/health", (req, res) => {
-    console.log("[Control API] Health check requested");
+    logger.log("[Control API] Health check requested");
     res.json({
       status: "ok",
       botReady: client.isReady(),
@@ -288,14 +309,14 @@ function startControlApi() {
         memberCount: g.memberCount,
         joinedAt: g.joinedAt?.toISOString(),
       }));
-      console.log(
+      logger.log(
         `[Control API] /control/guilds: Returning ${
           guilds.length
         } guilds (IDs: ${guilds.map((g) => g.id).join(", ") || "none"})`
       );
       res.json(guilds);
     } catch (e) {
-      console.error(`[Control API] /control/guilds error:`, e);
+      logger.error(`[Control API] /control/guilds error:`, e);
       res.status(500).json({ error: e.message });
     }
   });
@@ -336,11 +357,11 @@ function startControlApi() {
 
   // Bind to localhost only for safety
   app.listen(CONTROL_PORT, "127.0.0.1", () => {
-    console.log(`[Control API] Started on 127.0.0.1:${CONTROL_PORT}`);
-    console.log(
+    logger.log(`[Control API] Started on 127.0.0.1:${CONTROL_PORT}`);
+    logger.log(
       `[Control API] Bot has access to ${client.guilds.cache.size} guilds`
     );
-    console.log(
+    logger.log(
       `[Control API] Guild IDs: ${
         Array.from(client.guilds.cache.keys()).join(", ") || "none"
       }`
@@ -1038,7 +1059,7 @@ function loadTrackingData(suppressLog = false) {
             loadedCount++;
           }
         } catch (error) {
-          console.error(
+          logger.error(
             `❌ Error loading tracking config for guild ${guildId}:`,
             error.message
           );
@@ -1217,7 +1238,7 @@ async function logTrackingEvent(
 
   const logChannelId = getLogChannel(guildId);
   if (!logChannelId) {
-    console.log(message);
+    logger.log(message);
     return;
   }
 
@@ -1231,7 +1252,7 @@ async function logTrackingEvent(
       }
     }
   } catch (error) {
-    console.log(message);
+    logger.log(message);
   }
 }
 
@@ -1254,7 +1275,7 @@ function getUptime() {
 // Function to auto-execute slash command
 async function autoExecuteCommand() {
   if (!autoExecutionEnabled) {
-    console.log("⏭️  Skipping auto-execution because it is disabled");
+    logger.log("⏭️  Skipping auto-execution because it is disabled");
     return;
   }
 
@@ -1270,12 +1291,12 @@ async function autoExecuteCommand() {
     );
 
     if (!textChannel) {
-      console.log("❌ Cannot find available text channel");
+      logger.log("❌ Cannot find available text channel");
       return;
     }
 
     // Send a message to log auto-execution
-    console.log(
+    logger.log(
       "🤖 Auto-executing ping command to maintain application active status..."
     );
 
@@ -1289,20 +1310,20 @@ async function autoExecuteCommand() {
     const nextExecutionDate = new Date(
       lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
     );
-    console.log(
+    logger.log(
       `✅ Auto-execution completed! Next execution time: ${nextExecutionDate.toLocaleString(
         "en-US"
       )}`
     );
   } catch (error) {
-    console.error("❌ Error during auto-execution:", error);
+    logger.error("❌ Error during auto-execution:", error);
   }
 }
 
 // Check if auto-command execution is needed
 function checkAndExecute() {
   if (!autoExecutionEnabled) {
-    console.log("⏭️  Auto-execution disabled; skipping check");
+    logger.log("⏭️  Auto-execution disabled; skipping check");
     return;
   }
 
@@ -1311,14 +1332,14 @@ function checkAndExecute() {
 
   // Execute if more than 30 days have passed since last execution
   if (timeSinceLastExecution >= AUTO_EXECUTE_INTERVAL_MS) {
-    console.log("📅 Auto-execution time reached...");
+    logger.log("📅 Auto-execution time reached...");
     autoExecuteCommand();
   } else {
     const daysRemaining = Math.ceil(
       (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastExecution) /
         (24 * 60 * 60 * 1000)
     );
-    console.log(
+    logger.log(
       `⏳ ${daysRemaining} day(s) remaining until next auto-execution`
     );
   }
@@ -1369,7 +1390,7 @@ function updateRichPresence() {
 
     presenceIndex = (presenceIndex + 1) % presenceMessages.length;
   } catch (error) {
-    console.error("❌ Error updating rich presence:", error);
+    logger.error("❌ Error updating rich presence:", error);
   }
 }
 
@@ -1389,38 +1410,38 @@ function setupAutoExecution() {
   clearAutoExecutionTimers();
 
   if (!autoExecutionEnabled) {
-    console.log("⏸️  Auto-execution is disabled; timers not scheduled");
+    logger.log("⏸️  Auto-execution is disabled; timers not scheduled");
     return;
   }
 
   // Execute once shortly after startup
   autoExecutionTimeout = setTimeout(() => {
     if (!autoExecutionEnabled) {
-      console.log("⏭️  Skipping first auto-execution (disabled)");
+      logger.log("⏭️  Skipping first auto-execution (disabled)");
       return;
     }
-    console.log("🚀 First auto-execution...");
+    logger.log("🚀 First auto-execution...");
     autoExecuteCommand();
   }, 60000); // Execute after 1 minute from startup
 
   // Check daily if execution is needed (instead of using interval exceeding 32-bit limit)
   autoExecutionInterval = setInterval(() => {
     if (!autoExecutionEnabled) {
-      console.log("⏭️  Auto-execution disabled; skipping interval check");
+      logger.log("⏭️  Auto-execution disabled; skipping interval check");
       return;
     }
     checkAndExecute();
   }, CHECK_INTERVAL);
 
-  console.log(
+  logger.log(
     `⏰ Auto-execution schedule set, will execute every ${AUTO_EXECUTE_INTERVAL_DAYS} days`
   );
-  console.log(`🔍 Checking every 24 hours if execution is needed`);
+  logger.log(`🔍 Checking every 24 hours if execution is needed`);
 
   const nextExecutionDate = new Date(
     lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
   );
-  console.log(
+  logger.log(
     `📅 Next scheduled execution time: ${nextExecutionDate.toLocaleString(
       "en-US"
     )}`
@@ -1508,7 +1529,7 @@ async function checkTwitchStreamers() {
             content: `@everyone 🔔 **${streamInfo.user_name}** is now streaming!`,
           });
 
-          console.log(
+          logger.log(
             `🔴 Sent live notification for ${streamInfo.user_name} in guild ${guildId}`
           );
 
@@ -1522,7 +1543,7 @@ async function checkTwitchStreamers() {
         twitchStreamStatus.set(streamer, isLive);
       }
     } catch (error) {
-      console.error(
+      logger.error(
         `❌ Error checking Twitch streamers for guild ${guildId}:`,
         error
       );
@@ -1550,7 +1571,7 @@ function openInviteBotGuide() {
   const guideExists = existsSync(htmlPath);
   if (!guideExists || isHeadless) {
     const locationHint = guideExists ? `file://${htmlPath}` : guideUrl;
-    console.log("💡 Setup guide available at:", locationHint);
+    logger.log("💡 Setup guide available at:", locationHint);
     return;
   }
 
@@ -1564,9 +1585,9 @@ function openInviteBotGuide() {
 
   exec(command, (error) => {
     if (error) {
-      console.log("💡 Setup guide available at:", guideUrl);
+      logger.log("💡 Setup guide available at:", guideUrl);
     } else {
-      console.log("🌐 Opening setup guide in your browser...");
+      logger.log("🌐 Opening setup guide in your browser...");
     }
   });
 }
@@ -1682,7 +1703,7 @@ client.once("clientReady", () => {
     // Start Twitch polling every 5 minutes (balances notifications with API rate limits)
     setInterval(checkTwitchStreamers, 300000);
   } else {
-    console.log(
+    logger.log(
       "⚠️ Twitch notifications disabled (missing TWITCH_CLIENT_ID or TWITCH_ACCESS_TOKEN in .env)"
     );
   }
@@ -1819,7 +1840,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/help\` 💬 – Show this message`,
       ephemeral: true,
     });
-    console.log(
+    logger.log(
       `✅ ${interaction.user.tag} executed help command${isDM ? " (DM)" : ""}`
     );
   }
@@ -1850,7 +1871,7 @@ client.on("interactionCreate", async (interaction) => {
         `🎖️ Your Active Developer status has been updated!`,
     });
 
-    console.log(`✅ ${interaction.user.tag} executed ping command`);
+    logger.log(`✅ ${interaction.user.tag} executed ping command`);
   }
 
   if (interaction.commandName === "uptime") {
@@ -1871,7 +1892,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(`✅ ${interaction.user.tag} executed uptime command`);
+    logger.log(`✅ ${interaction.user.tag} executed uptime command`);
   }
 
   if (interaction.commandName === "prefix") {
@@ -1914,7 +1935,7 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ Prefix updated to \`${PREFIX}\``,
         ephemeral: true,
       });
-      console.log(`🔧 ${interaction.user.tag} changed prefix to ${PREFIX}`);
+      logger.log(`🔧 ${interaction.user.tag} changed prefix to ${PREFIX}`);
     } catch (e) {
       await interaction.reply({
         content: `❌ Failed to update prefix: ${e.message}`,
@@ -1999,11 +2020,11 @@ client.on("interactionCreate", async (interaction) => {
           }`,
       });
 
-      console.log(
+      logger.log(
         `🗑️ ${interaction.user.tag} purged ${deletedCount} messages in #${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error purging messages:", error);
+      logger.error("❌ Error purging messages:", error);
       await interaction.editReply({
         content: "❌ An error occurred while trying to delete messages.",
       });
@@ -2044,7 +2065,7 @@ client.on("interactionCreate", async (interaction) => {
         `✅ Auto-execution: ${autoExecutionEnabled ? "Enabled" : "Disabled"}`,
     });
 
-    console.log(`✅ ${interaction.user.tag} executed status command`);
+    logger.log(`✅ ${interaction.user.tag} executed status command`);
   }
 
   // Auto-execution command - runtime enable/disable/status
@@ -2073,7 +2094,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`▶️ ${interaction.user.tag} enabled auto-execution`);
+      logger.log(`▶️ ${interaction.user.tag} enabled auto-execution`);
       return;
     }
 
@@ -2086,7 +2107,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`⏹️ ${interaction.user.tag} disabled auto-execution`);
+      logger.log(`⏹️ ${interaction.user.tag} disabled auto-execution`);
       return;
     }
 
@@ -2118,7 +2139,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(`ℹ️ ${interaction.user.tag} viewed auto-execution status`);
+    logger.log(`ℹ️ ${interaction.user.tag} viewed auto-execution status`);
   }
 
   // Server info command
@@ -2151,7 +2172,7 @@ client.on("interactionCreate", async (interaction) => {
         `${guild.icon ? `🖼️ **Icon:** [View](${guild.iconURL()})` : ""}`,
     });
 
-    console.log(`✅ ${interaction.user.tag} executed serverinfo command`);
+    logger.log(`✅ ${interaction.user.tag} executed serverinfo command`);
   }
 
   // User info command
@@ -2172,7 +2193,7 @@ client.on("interactionCreate", async (interaction) => {
           `💡 Use this command in a server for more details.`,
         ephemeral: true,
       });
-      console.log(
+      logger.log(
         `✅ ${interaction.user.tag} executed userinfo (DM) for ${user.tag}`
       );
       return;
@@ -2201,7 +2222,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `✅ ${interaction.user.tag} executed userinfo command for ${user.tag}`
     );
   }
@@ -2227,7 +2248,7 @@ client.on("interactionCreate", async (interaction) => {
         `🔌 **Discord.js Version:** v${discordVersion}`,
     });
 
-    console.log(`✅ ${interaction.user.tag} executed stats command`);
+    logger.log(`✅ ${interaction.user.tag} executed stats command`);
   }
 
   // Lock command
@@ -2256,9 +2277,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `🔒 Channel locked! Only members with specific roles can send messages.`,
       });
 
-      console.log(`🔒 ${interaction.user.tag} locked channel #${channel.name}`);
+      logger.log(`🔒 ${interaction.user.tag} locked channel #${channel.name}`);
     } catch (error) {
-      console.error("❌ Error locking channel:", error);
+      logger.error("❌ Error locking channel:", error);
       await interaction.reply({
         content: "❌ Failed to lock the channel.",
         ephemeral: true,
@@ -2292,11 +2313,11 @@ client.on("interactionCreate", async (interaction) => {
         content: `🔓 Channel unlocked! Everyone can send messages again.`,
       });
 
-      console.log(
+      logger.log(
         `🔓 ${interaction.user.tag} unlocked channel #${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error unlocking channel:", error);
+      logger.error("❌ Error unlocking channel:", error);
       await interaction.reply({
         content: "❌ Failed to unlock the channel.",
         ephemeral: true,
@@ -2330,11 +2351,11 @@ client.on("interactionCreate", async (interaction) => {
 
       await interaction.reply({ content: message });
 
-      console.log(
+      logger.log(
         `⏱️ ${interaction.user.tag} set slowmode to ${seconds}s in #${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error setting slowmode:", error);
+      logger.error("❌ Error setting slowmode:", error);
       await interaction.reply({
         content: "❌ Failed to set slowmode.",
         ephemeral: true,
@@ -2375,9 +2396,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ **${user.tag}** has been kicked.\n📝 **Reason:** ${reason}`,
       });
 
-      console.log(`👢 ${interaction.user.tag} kicked ${user.tag}: ${reason}`);
+      logger.log(`👢 ${interaction.user.tag} kicked ${user.tag}: ${reason}`);
     } catch (error) {
-      console.error("❌ Error kicking user:", error);
+      logger.error("❌ Error kicking user:", error);
       await interaction.reply({
         content: "❌ Failed to kick the user.",
         ephemeral: true,
@@ -2418,9 +2439,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ **${user.tag}** has been banned.\n📝 **Reason:** ${reason}`,
       });
 
-      console.log(`⛔ ${interaction.user.tag} banned ${user.tag}: ${reason}`);
+      logger.log(`⛔ ${interaction.user.tag} banned ${user.tag}: ${reason}`);
     } catch (error) {
-      console.error("❌ Error banning user:", error);
+      logger.error("❌ Error banning user:", error);
       await interaction.reply({
         content: "❌ Failed to ban the user.",
         ephemeral: true,
@@ -2464,11 +2485,11 @@ client.on("interactionCreate", async (interaction) => {
         content: `🔇 **${user.tag}** has been muted for ${minutes} minute(s).\n📝 **Reason:** ${reason}`,
       });
 
-      console.log(
+      logger.log(
         `🔇 ${interaction.user.tag} muted ${user.tag} for ${minutes}m: ${reason}`
       );
     } catch (error) {
-      console.error("❌ Error muting user:", error);
+      logger.error("❌ Error muting user:", error);
       await interaction.reply({
         content: "❌ Failed to mute the user.",
         ephemeral: true,
@@ -2507,9 +2528,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `🔊 **${user.tag}** has been unmuted.`,
       });
 
-      console.log(`🔊 ${interaction.user.tag} unmuted ${user.tag}`);
+      logger.log(`🔊 ${interaction.user.tag} unmuted ${user.tag}`);
     } catch (error) {
-      console.error("❌ Error unmuting user:", error);
+      logger.error("❌ Error unmuting user:", error);
       await interaction.reply({
         content: "❌ Failed to unmute the user.",
         ephemeral: true,
@@ -2539,9 +2560,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `⚠️ **${user.tag}** has been warned.\n📝 **Reason:** ${reason}`,
       });
 
-      console.log(`⚠️ ${interaction.user.tag} warned ${user.tag}: ${reason}`);
+      logger.log(`⚠️ ${interaction.user.tag} warned ${user.tag}: ${reason}`);
     } catch (error) {
-      console.error("❌ Error warning user:", error);
+      logger.error("❌ Error warning user:", error);
       await interaction.reply({
         content: "❌ Failed to warn the user.",
         ephemeral: true,
@@ -2574,11 +2595,11 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `💬 ${interaction.user.tag} sent a message via /say in #${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error sending message:", error);
+      logger.error("❌ Error sending message:", error);
       await interaction.reply({
         content: "❌ Failed to send the message.",
         ephemeral: true,
@@ -2617,9 +2638,9 @@ client.on("interactionCreate", async (interaction) => {
         await pollMessage.react(emojis[i]);
       }
 
-      console.log(`📊 ${interaction.user.tag} created a poll: ${question}`);
+      logger.log(`📊 ${interaction.user.tag} created a poll: ${question}`);
     } catch (error) {
-      console.error("❌ Error creating poll:", error);
+      logger.error("❌ Error creating poll:", error);
       await interaction.reply({
         content: "❌ Failed to create the poll.",
         ephemeral: true,
@@ -2645,15 +2666,15 @@ client.on("interactionCreate", async (interaction) => {
             `⏰ **Reminder from ${minutes} minute(s) ago:** ${reminder}`
           );
         } catch (error) {
-          console.error("❌ Could not send reminder DM:", error);
+          logger.error("❌ Could not send reminder DM:", error);
         }
       }, minutes * 60 * 1000);
 
-      console.log(
+      logger.log(
         `⏰ ${interaction.user.tag} set a reminder: ${reminder} (${minutes}m)`
       );
     } catch (error) {
-      console.error("❌ Error setting reminder:", error);
+      logger.error("❌ Error setting reminder:", error);
       await interaction.reply({
         content: "❌ Failed to set the reminder.",
         ephemeral: true,
@@ -2681,16 +2702,16 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`🌐 ${interaction.user.tag} requested the dashboard link`);
+      logger.log(`🌐 ${interaction.user.tag} requested the dashboard link`);
     } catch (error) {
-      console.error("❌ Error in dashboard command:", error);
+      logger.error("❌ Error in dashboard command:", error);
       try {
         await interaction.reply({
           content: "❌ An error occurred while retrieving the dashboard URL.",
           ephemeral: true,
         });
       } catch (replyError) {
-        console.error("❌ Failed to send error reply:", replyError);
+        logger.error("❌ Failed to send error reply:", replyError);
       }
     }
   }
@@ -2716,9 +2737,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`🔗 ${interaction.user.tag} requested bot invite link`);
+      logger.log(`🔗 ${interaction.user.tag} requested bot invite link`);
     } catch (error) {
-      console.error("❌ Error generating invite:", error);
+      logger.error("❌ Error generating invite:", error);
       await interaction.reply({
         content: "❌ Failed to generate invite link.",
         ephemeral: true,
@@ -2768,9 +2789,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`📋 ${interaction.user.tag} viewed server audit logs`);
+      logger.log(`📋 ${interaction.user.tag} viewed server audit logs`);
     } catch (error) {
-      console.error("❌ Error fetching logs:", error);
+      logger.error("❌ Error fetching logs:", error);
       await interaction.reply({
         content: "❌ Failed to fetch audit logs.",
         ephemeral: true,
@@ -2818,9 +2839,9 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
 
-        console.log(`⚙️ ${interaction.user.tag} viewed bot configuration`);
+        logger.log(`⚙️ ${interaction.user.tag} viewed bot configuration`);
       } catch (error) {
-        console.error("❌ Error viewing config:", error);
+        logger.error("❌ Error viewing config:", error);
         await interaction.reply({
           content: "❌ Failed to fetch configuration.",
           ephemeral: true,
@@ -2863,9 +2884,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`💾 ${interaction.user.tag} viewed backup information`);
+      logger.log(`💾 ${interaction.user.tag} viewed backup information`);
     } catch (error) {
-      console.error("❌ Error fetching backup info:", error);
+      logger.error("❌ Error fetching backup info:", error);
       await interaction.reply({
         content: "❌ Failed to fetch backup information.",
         ephemeral: true,
@@ -2884,9 +2905,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`👤 ${interaction.user.tag} viewed ${user.tag}'s avatar`);
+      logger.log(`👤 ${interaction.user.tag} viewed ${user.tag}'s avatar`);
     } catch (error) {
-      console.error("❌ Error fetching avatar:", error);
+      logger.error("❌ Error fetching avatar:", error);
       await interaction.reply({
         content: "❌ Failed to fetch avatar.",
         ephemeral: true,
@@ -2909,11 +2930,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
-        `📬 ${interaction.user.tag} sent notification to ${user.tag}`
-      );
+      logger.log(`📬 ${interaction.user.tag} sent notification to ${user.tag}`);
     } catch (error) {
-      console.error("❌ Error sending notification:", error);
+      logger.error("❌ Error sending notification:", error);
       await interaction.reply({
         content: "❌ Failed to send notification (user may have DMs disabled).",
         ephemeral: true,
@@ -2931,9 +2950,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`🔊 ${interaction.user.tag} echoed: ${text}`);
+      logger.log(`🔊 ${interaction.user.tag} echoed: ${text}`);
     } catch (error) {
-      console.error("❌ Error echoing text:", error);
+      logger.error("❌ Error echoing text:", error);
       await interaction.reply({
         content: "❌ Failed to echo text.",
         ephemeral: true,
@@ -2967,11 +2986,11 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🏷️ ${interaction.user.tag} viewed info for role: ${role.name}`
       );
     } catch (error) {
-      console.error("❌ Error fetching role info:", error);
+      logger.error("❌ Error fetching role info:", error);
       await interaction.reply({
         content: "❌ Failed to fetch role information.",
         ephemeral: true,
@@ -3003,11 +3022,11 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `💬 ${interaction.user.tag} viewed info for channel: ${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error fetching channel info:", error);
+      logger.error("❌ Error fetching channel info:", error);
       await interaction.reply({
         content: "❌ Failed to fetch channel information.",
         ephemeral: true,
@@ -3047,9 +3066,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`⏰ ${interaction.user.tag} checked uptime ranking`);
+      logger.log(`⏰ ${interaction.user.tag} checked uptime ranking`);
     } catch (error) {
-      console.error("❌ Error fetching uptime ranking:", error);
+      logger.error("❌ Error fetching uptime ranking:", error);
       await interaction.reply({
         content: "❌ Failed to fetch uptime ranking.",
         ephemeral: true,
@@ -3098,9 +3117,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`⛔ ${interaction.user.tag} viewed ban list`);
+      logger.log(`⛔ ${interaction.user.tag} viewed ban list`);
     } catch (error) {
-      console.error("❌ Error fetching ban list:", error);
+      logger.error("❌ Error fetching ban list:", error);
       await interaction.reply({
         content: "❌ Failed to fetch ban list.",
         ephemeral: true,
@@ -3127,11 +3146,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
-        `🔄 ${interaction.user.tag} cleared warnings for ${user.tag}`
-      );
+      logger.log(`🔄 ${interaction.user.tag} cleared warnings for ${user.tag}`);
     } catch (error) {
-      console.error("❌ Error clearing warnings:", error);
+      logger.error("❌ Error clearing warnings:", error);
       await interaction.reply({
         content: "❌ Failed to clear warnings.",
         ephemeral: true,
@@ -3174,7 +3191,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🔄 ${interaction.user.tag} ${
           enabled ? "enabled" : "disabled"
         } tracking in ${interaction.guild.name}`
@@ -3206,7 +3223,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🔄 ${interaction.user.tag} set tracking channel to #${channel.name} in ${interaction.guild.name}`
       );
     } else if (subcommand === "status") {
@@ -3305,7 +3322,7 @@ client.on("interactionCreate", async (interaction) => {
           content: `✅ ${channel} has been **removed** from the tracking ignore list.`,
           ephemeral: true,
         });
-        console.log(
+        logger.log(
           `🔄 ${interaction.user.tag} removed ${channel.name} from ignore list in ${interaction.guild.name}`
         );
       } else {
@@ -3314,7 +3331,7 @@ client.on("interactionCreate", async (interaction) => {
           content: `✅ ${channel} has been **added** to the tracking ignore list.`,
           ephemeral: true,
         });
-        console.log(
+        logger.log(
           `🔄 ${interaction.user.tag} added ${channel.name} to ignore list in ${interaction.guild.name}`
         );
       }
@@ -3393,7 +3410,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🔄 ${interaction.user.tag} updated tracking events in ${interaction.guild.name}`
       );
     }
@@ -3457,7 +3474,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `✅ Added Twitch streamer ${streamerName} to ${interaction.guild.name}`
       );
     } else if (subcommand === "remove") {
@@ -3491,7 +3508,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `✅ Removed Twitch streamer ${streamerName} from ${interaction.guild.name}`
       );
     } else if (subcommand === "list") {
@@ -3541,7 +3558,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`
       );
     } else if (subcommand === "duplicates") {
@@ -3558,7 +3575,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `🔄 ${
           interaction.user.tag
         } set Twitch duplicate notifications to ${allow} in guild ${
@@ -3598,7 +3615,7 @@ client.on("interactionCreate", async (interaction) => {
         `🔮 **Answer:** ${response}`,
     });
 
-    console.log(`🎱 ${interaction.user.tag} used 8ball: ${question}`);
+    logger.log(`🎱 ${interaction.user.tag} used 8ball: ${question}`);
   }
 
   // Dice command
@@ -3626,7 +3643,7 @@ client.on("interactionCreate", async (interaction) => {
         `🔢 **Rolls:** ${rolls}`,
     });
 
-    console.log(
+    logger.log(
       `🎲 ${interaction.user.tag} rolled ${rolls}d${sides}: ${resultText}`
     );
   }
@@ -3640,7 +3657,7 @@ client.on("interactionCreate", async (interaction) => {
       content: `${emoji} **Coin Flip**\n━━━━━━━━━━━━━━\nResult: **${flip}**`,
     });
 
-    console.log(`🪙 ${interaction.user.tag} flipped a coin: ${flip}`);
+    logger.log(`🪙 ${interaction.user.tag} flipped a coin: ${flip}`);
   }
 
   // Quote command
@@ -3669,7 +3686,7 @@ client.on("interactionCreate", async (interaction) => {
       content: `✨ **Inspirational Quote**\n━━━━━━━━━━━━━━━━━━\n"${quote}"`,
     });
 
-    console.log(`✨ ${interaction.user.tag} requested a quote`);
+    logger.log(`✨ ${interaction.user.tag} requested a quote`);
   }
 
   // Joke command
@@ -3698,7 +3715,7 @@ client.on("interactionCreate", async (interaction) => {
       content: `😂 **Joke**\n━━━━━━━━━\n${joke}`,
     });
 
-    console.log(`😂 ${interaction.user.tag} requested a joke`);
+    logger.log(`😂 ${interaction.user.tag} requested a joke`);
   }
 
   // Warn list command
@@ -3716,7 +3733,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(`⚠️ ${interaction.user.tag} viewed warnings for ${user.tag}`);
+    logger.log(`⚠️ ${interaction.user.tag} viewed warnings for ${user.tag}`);
   }
 
   // Role assign command
@@ -3751,11 +3768,11 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ Assigned **${role.name}** to **${user.tag}**`,
       });
 
-      console.log(
+      logger.log(
         `✅ ${interaction.user.tag} assigned ${role.name} to ${user.tag}`
       );
     } catch (error) {
-      console.error("❌ Error assigning role:", error);
+      logger.error("❌ Error assigning role:", error);
       await interaction.reply({
         content: "❌ Failed to assign the role.",
         ephemeral: true,
@@ -3795,11 +3812,11 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ Removed **${role.name}** from **${user.tag}**`,
       });
 
-      console.log(
+      logger.log(
         `✅ ${interaction.user.tag} removed ${role.name} from ${user.tag}`
       );
     } catch (error) {
-      console.error("❌ Error removing role:", error);
+      logger.error("❌ Error removing role:", error);
       await interaction.reply({
         content: "❌ Failed to remove the role.",
         ephemeral: true,
@@ -3837,11 +3854,9 @@ client.on("interactionCreate", async (interaction) => {
           `🔗 Topic: ${topic || "None"}`,
       });
 
-      console.log(
-        `✅ ${interaction.user.tag} created channel #${channel.name}`
-      );
+      logger.log(`✅ ${interaction.user.tag} created channel #${channel.name}`);
     } catch (error) {
-      console.error("❌ Error creating channel:", error);
+      logger.error("❌ Error creating channel:", error);
       await interaction.reply({
         content: "❌ Failed to create the channel.",
         ephemeral: true,
@@ -3881,9 +3896,9 @@ client.on("interactionCreate", async (interaction) => {
         content: `✅ Deleted channel #${channelName}`,
       });
 
-      console.log(`🗑️ ${interaction.user.tag} deleted channel #${channelName}`);
+      logger.log(`🗑️ ${interaction.user.tag} deleted channel #${channelName}`);
     } catch (error) {
-      console.error("❌ Error deleting channel:", error);
+      logger.error("❌ Error deleting channel:", error);
       await interaction.reply({
         content: "❌ Failed to delete the channel.",
         ephemeral: true,
@@ -3916,7 +3931,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `${interaction.user.tag} configured welcome message for #${channel.name}`
     );
   }
@@ -3956,7 +3971,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`⚙️ ${interaction.user.tag} viewed server settings`);
+      logger.log(`⚙️ ${interaction.user.tag} viewed server settings`);
     }
   }
 
@@ -3987,11 +4002,11 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(
+      logger.log(
         `📢 ${interaction.user.tag} made an announcement in #${channel.name}`
       );
     } catch (error) {
-      console.error("❌ Error sending announcement:", error);
+      logger.error("❌ Error sending announcement:", error);
       await interaction.reply({
         content: "❌ Failed to send the announcement.",
         ephemeral: true,
@@ -4014,9 +4029,9 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      console.log(`🔔 ${interaction.user.tag} pinged ${user.tag}`);
+      logger.log(`🔔 ${interaction.user.tag} pinged ${user.tag}`);
     } catch (error) {
-      console.error("❌ Error sending DM:", error);
+      logger.error("❌ Error sending DM:", error);
       await interaction.reply({
         content: `❌ Could not send message to **${user.tag}**. They may have DMs disabled.`,
         ephemeral: true,
@@ -4042,7 +4057,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(`🤖 ${interaction.user.tag} requested bot info`);
+    logger.log(`🤖 ${interaction.user.tag} requested bot info`);
   }
 
   // Suggest command
@@ -4058,7 +4073,7 @@ client.on("interactionCreate", async (interaction) => {
         `💡 **New Suggestion** from ${interaction.user.tag} (${interaction.guild.name})\n━━━━━━━━━━━━━━━━━\n${suggestion}`
       );
     } catch (error) {
-      console.log("Could not send suggestion to owner, logging instead");
+      logger.log("Could not send suggestion to owner, logging instead");
     }
 
     await interaction.reply({
@@ -4066,7 +4081,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `💡 ${interaction.user.tag} submitted a suggestion: ${suggestion}`
     );
   }
@@ -4089,7 +4104,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `📊 ${interaction.user.tag} viewed command activity for ${days} days`
     );
   }
@@ -4124,7 +4139,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} enabled translation in ${channel.name} (${guildId})`
     );
   }
@@ -4155,7 +4170,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `⚙️ ${interaction.user.tag} updated translation config for guild ${guildId}`
     );
   }
@@ -4179,7 +4194,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} set translation output channel to ${outputChannel.name} (${guildId})`
     );
   }
@@ -4202,7 +4217,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} cleared translation output channel (${guildId})`
     );
   }
@@ -4237,7 +4252,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} added language ${language} (${guildId})`
     );
   }
@@ -4282,7 +4297,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} removed language ${language} (${guildId})`
     );
   }
@@ -4365,7 +4380,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
 
-    console.log(
+    logger.log(
       `🌐 ${interaction.user.tag} disabled translation in ${channel.name} (${guildId})`
     );
   }
@@ -4481,11 +4496,11 @@ client.on("interactionCreate", async (interaction) => {
 
       await interaction.editReply({ embeds: [embed] });
 
-      console.log(
+      logger.log(
         `🌐 ${interaction.user.tag} translated text: ${result.from.language.iso} → ${toLang}`
       );
     } catch (error) {
-      console.error("Translation error:", error);
+      logger.error("Translation error:", error);
       await interaction.editReply({
         content: `❌ Translation failed. Please check the language codes and try again.\n💡 Common codes: en, es, de, fr, it, ja, ko, zh-CN, pt, ru`,
       });
@@ -4606,9 +4621,9 @@ client.on("messageCreate", async (message) => {
 
     try {
       await message.reply({ content: helpContent });
-      console.log(`📖 ${message.author.tag} used prefix command: help`);
+      logger.log(`📖 ${message.author.tag} used prefix command: help`);
     } catch (error) {
-      console.error("❌ Error sending help:", error);
+      logger.error("❌ Error sending help:", error);
     }
   }
 
@@ -4631,9 +4646,9 @@ client.on("messageCreate", async (message) => {
           `✅ Bot is working properly`,
       });
 
-      console.log(`🏓 ${message.author.tag} used prefix command: ping`);
+      logger.log(`🏓 ${message.author.tag} used prefix command: ping`);
     } catch (error) {
-      console.error("❌ Error editing ping response:", error);
+      logger.error("❌ Error editing ping response:", error);
     }
   }
 
@@ -4656,9 +4671,9 @@ client.on("messageCreate", async (message) => {
           `✅ Status: Online and operational`,
       });
 
-      console.log(`⏰ ${message.author.tag} used prefix command: uptime`);
+      logger.log(`⏰ ${message.author.tag} used prefix command: uptime`);
     } catch (error) {
-      console.error("❌ Error sending uptime:", error);
+      logger.error("❌ Error sending uptime:", error);
     }
   }
 
@@ -4675,9 +4690,9 @@ client.on("messageCreate", async (message) => {
             `Use \`${PREFIX}prefix <newPrefix>\` to change it.`,
         });
 
-        console.log(`📋 ${message.author.tag} checked the command prefix`);
+        logger.log(`📋 ${message.author.tag} checked the command prefix`);
       } catch (error) {
-        console.error("❌ Error sending prefix info:", error);
+        logger.error("❌ Error sending prefix info:", error);
       }
       return;
     }
@@ -4702,7 +4717,7 @@ client.on("messageCreate", async (message) => {
       await message.reply({
         content: `✅ Prefix updated to \`${PREFIX}\``,
       });
-      console.log(`🔧 ${message.author.tag} changed prefix to ${PREFIX}`);
+      logger.log(`🔧 ${message.author.tag} changed prefix to ${PREFIX}`);
     } catch (e) {
       await message.reply({
         content: `❌ Failed to update prefix: ${e.message}`,
@@ -4717,7 +4732,7 @@ client.on("messageCreate", async (message) => {
         content: `❌ Unknown command \`${PREFIX}${command}\`. Use \`${PREFIX}help\` for available commands.`,
       });
     } catch (error) {
-      console.error("❌ Error sending unknown command message:", error);
+      logger.error("❌ Error sending unknown command message:", error);
     }
   }
 });
@@ -4765,7 +4780,7 @@ client.on("messageCreate", async (message) => {
     try {
       await message.react(sourceFlag);
     } catch (error) {
-      console.error(`Failed to add reaction: ${error.message}`);
+      logger.error(`Failed to add reaction: ${error.message}`);
     }
 
     // Translate to each target language
@@ -4787,13 +4802,13 @@ client.on("messageCreate", async (message) => {
         try {
           targetChannel = await message.guild.channels.fetch(outputChannelId);
           if (!targetChannel) {
-            console.error(
+            logger.error(
               `Output channel ${outputChannelId} not found in guild ${guildId}`
             );
             targetChannel = message.channel;
           }
         } catch (error) {
-          console.error(
+          logger.error(
             `Failed to fetch output channel ${outputChannelId}: ${error.message}`
           );
           targetChannel = message.channel;
@@ -4863,7 +4878,7 @@ client.on("messageCreate", async (message) => {
       }
     }
   } catch (error) {
-    console.error(`❌ Translation error in guild ${guildId}:`, error);
+    logger.error(`❌ Translation error in guild ${guildId}:`, error);
     // Silently fail - don't spam channels with error messages
   }
 });
@@ -5608,16 +5623,16 @@ client.on("guildBanRemove", async (ban) => {
 
 // Track when bot joins a server
 client.on("guildCreate", async (guild) => {
-  console.log(
+  logger.log(
     `🎉 [BOT JOIN] Bot joined new server: ${guild.name} (${guild.id})`
   );
-  console.log(`   Members: ${guild.memberCount}`);
-  console.log(`   Owner: ${(await guild.fetchOwner()).user.tag}`);
+  logger.log(`   Members: ${guild.memberCount}`);
+  logger.log(`   Owner: ${(await guild.fetchOwner()).user.tag}`);
 });
 
 // Track when bot leaves a server
 client.on("guildDelete", async (guild) => {
-  console.log(
+  logger.log(
     `👋 [BOT LEAVE] Bot removed from server: ${guild.name} (${guild.id})`
   );
 });
@@ -5655,36 +5670,36 @@ setInterval(() => {
 
 // Error handling
 client.on("error", (error) => {
-  console.error("❌ Discord client error:", error);
+  logger.error("❌ Discord client error:", error);
 });
 
 process.on("unhandledRejection", (error) => {
-  console.error("❌ Unhandled Promise rejection:", error);
+  logger.error("❌ Unhandled Promise rejection:", error);
 });
 
 // Track if guide has been opened
 let guideOpened = false;
 
 // Open setup guide on startup
-console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-console.log("🚀 Starting Discord Active Developer Badge Bot...");
-console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+logger.log("🚀 Starting Discord Active Developer Badge Bot...");
+logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 openInviteBotGuide();
 guideOpened = true;
 
 // Login bot
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
-  console.error("❌ Unable to login bot:", error);
-  console.log(
+  logger.error("❌ Unable to login bot:", error);
+  logger.log(
     "Please check if your DISCORD_TOKEN is correctly set in the .env file"
   );
 
   // Only open guide if it wasn't already opened
   if (!guideOpened) {
-    console.log("\n📖 Opening setup guide to help you configure the bot...");
+    logger.log("\n📖 Opening setup guide to help you configure the bot...");
     openInviteBotGuide();
   } else {
-    console.log("\n📖 Please check the setup guide in your browser for help.");
+    logger.log("\n📖 Please check the setup guide in your browser for help.");
   }
 
   setTimeout(() => process.exit(1), 2000);

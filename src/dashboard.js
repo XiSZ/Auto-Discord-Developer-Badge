@@ -6,8 +6,15 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  unlinkSync,
+} from "fs";
 import { exec } from "child_process";
+import { logger } from "./utils.js";
 
 dotenv.config();
 
@@ -21,14 +28,14 @@ const CONTROL_TOKEN =
   process.env.CONTROL_TOKEN || process.env.SESSION_SECRET || "";
 const COMMAND_PREFIX = process.env.COMMAND_PREFIX || "!";
 
-console.log("[Dashboard] Starting with configuration:");
-console.log(`[Dashboard] BOT_CONTROL_PORT: ${BOT_CONTROL_PORT}`);
-console.log(
+logger.log("[Dashboard] Starting with configuration:");
+logger.log(`[Dashboard] BOT_CONTROL_PORT: ${BOT_CONTROL_PORT}`);
+logger.log(
   `[Dashboard] CONTROL_TOKEN: ${
     CONTROL_TOKEN ? "SET (length: " + CONTROL_TOKEN.length + ")" : "NOT SET"
   }`
 );
-console.log(
+logger.log(
   `[Dashboard] SESSION_SECRET: ${
     process.env.SESSION_SECRET ? "SET" : "NOT SET"
   }`
@@ -40,8 +47,8 @@ app.use(express.json());
 async function callBotControl(path, method = "GET", body = null) {
   const url = `http://127.0.0.1:${BOT_CONTROL_PORT}${path}`;
   const token = CONTROL_TOKEN;
-  console.log(`[Dashboard] Calling bot control API: ${url}`);
-  console.log(
+  logger.log(`[Dashboard] Calling bot control API: ${url}`);
+  logger.log(
     `[Dashboard] Token being sent: ${
       token ? "SET (length: " + token.length + ")" : "undefined/empty"
     }`
@@ -68,10 +75,10 @@ async function callBotControl(path, method = "GET", body = null) {
       );
     }
     const data = await response.json();
-    console.log(`[Dashboard] Control API response successful`);
+    logger.log(`[Dashboard] Control API response successful`);
     return data;
   } catch (error) {
-    console.error(`[Dashboard] Control API error:`, error.message);
+    logger.error(`[Dashboard] Control API error:`, error.message);
     throw error;
   }
 }
@@ -89,7 +96,7 @@ app.get("/api/meta", async (req, res) => {
     try {
       botInfo = await callBotControl("/control/bot-info");
     } catch (error) {
-      console.error("Failed to fetch bot info from control API:", error);
+      logger.error("Failed to fetch bot info from control API:", error);
     }
 
     // If we got bot info, use it. Otherwise fall back to environment variables
@@ -154,9 +161,29 @@ app.post("/api/prefix", isAuthenticated, async (req, res) => {
   }
 });
 
+// Helper function to check if a directory is writable
+function isDirectoryWritable(dirPath) {
+  try {
+    // Try to create a test file to check write permissions
+    const testFile = join(dirPath, ".write-test");
+    writeFileSync(testFile, "test");
+    unlinkSync(testFile); // Clean up
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 // Helpers for config paths
-const DATA_DIR =
-  process.env.RAILWAY_VOLUME_MOUNT_PATH || join(__dirname, "..", "data");
+let DATA_DIR;
+if (
+  process.env.RAILWAY_VOLUME_MOUNT_PATH &&
+  isDirectoryWritable(process.env.RAILWAY_VOLUME_MOUNT_PATH)
+) {
+  DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+} else {
+  DATA_DIR = join(__dirname, "..", "data");
+}
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const BADGE_SETTINGS_PATH = join(DATA_DIR, "badge-settings.json");
 const DISABLED_COMMANDS_PATH = join(DATA_DIR, "disabled-commands.json");
@@ -184,9 +211,15 @@ function writeJSON(path, data) {
 
 // Create session file store
 const SessionFileStore = FileStore(session);
-const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-  ? join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "sessions")
-  : join(__dirname, "..", "sessions");
+let sessionPath;
+if (
+  process.env.RAILWAY_VOLUME_MOUNT_PATH &&
+  isDirectoryWritable(join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "sessions"))
+) {
+  sessionPath = join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "sessions");
+} else {
+  sessionPath = join(__dirname, "..", "sessions");
+}
 
 // Ensure sessions directory exists
 if (!existsSync(sessionPath)) {
@@ -345,10 +378,10 @@ app.post("/api/badge/settings", isAuthenticated, async (req, res) => {
 app.get("/api/guilds", isAuthenticated, async (req, res) => {
   try {
     const guilds = req.user.guilds || [];
-    console.log(
+    logger.log(
       `[API] User has access to ${guilds.length} total guilds from OAuth`
     );
-    console.log(
+    logger.log(
       `[API] OAuth guild IDs: ${guilds.map((g) => g.id).join(", ") || "none"}`
     );
 
@@ -356,10 +389,10 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
     const manageableGuilds = guilds.filter(
       (guild) => (guild.permissions & 0x20) === 0x20
     );
-    console.log(
+    logger.log(
       `[API] User has MANAGE_GUILD in ${manageableGuilds.length} guilds`
     );
-    console.log(
+    logger.log(
       `[API] Manageable guild IDs: ${
         manageableGuilds.map((g) => g.id).join(", ") || "none"
       }`
@@ -369,11 +402,11 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
     let botGuilds = [];
     try {
       botGuilds = await callBotControl("/control/guilds");
-      console.log(
+      logger.log(
         `[API] Successfully fetched ${botGuilds.length} bot guilds from control API`
       );
     } catch (error) {
-      console.error(
+      logger.error(
         "[API] Failed to fetch bot guilds from control API:",
         error.message
       );
@@ -381,14 +414,14 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
     }
 
     const botGuildIds = new Set(botGuilds.map((g) => g.id));
-    console.log(
+    logger.log(
       `[API] Bot is in guilds: ${Array.from(botGuildIds).join(", ") || "none"}`
     );
 
     // Check which guilds the bot is in
     const guildsWithBotStatus = manageableGuilds.map((guild) => {
       const botJoined = botGuildIds.has(guild.id);
-      console.log(
+      logger.log(
         `[API] Guild ${guild.id}: botJoined=${botJoined}, name=${guild.name}`
       );
       return {
@@ -399,7 +432,7 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
 
     res.json(guildsWithBotStatus);
   } catch (error) {
-    console.error("[API] Error in /api/guilds:", error);
+    logger.error("[API] Error in /api/guilds:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -407,7 +440,7 @@ app.get("/api/guilds", isAuthenticated, async (req, res) => {
 // Debug endpoint to check bot control API status
 app.get("/api/debug/control-api", isAuthenticated, async (req, res) => {
   try {
-    console.log("[DEBUG] Checking control API health...");
+    logger.log("[DEBUG] Checking control API health...");
     const health = await callBotControl("/control/health");
     res.json({
       success: true,
@@ -419,7 +452,7 @@ app.get("/api/debug/control-api", isAuthenticated, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[DEBUG] Control API health check failed:", error);
+    logger.error("[DEBUG] Control API health check failed:", error);
     res.json({
       success: false,
       error: error.message,
@@ -531,20 +564,20 @@ app.get("/api/guild/:guildId/channels", isAuthenticated, async (req, res) => {
 
     // Verify permission
     const userGuilds = req.user.guilds || [];
-    console.log(`[API] Channel request for guild ${guildId}`);
-    console.log(
+    logger.log(`[API] Channel request for guild ${guildId}`);
+    logger.log(
       `[API] User guilds in OAuth: ${userGuilds.map((g) => g.id).join(", ")}`
     );
 
     const guildInOAuth = userGuilds.find((g) => g.id === guildId);
-    console.log(
+    logger.log(
       `[API] Guild ${guildId} in OAuth: ${guildInOAuth ? "YES" : "NO"}`
     );
     if (guildInOAuth) {
-      console.log(
+      logger.log(
         `[API] Guild ${guildId} permissions: ${guildInOAuth.permissions} (MANAGE_GUILD=0x20)`
       );
-      console.log(
+      logger.log(
         `[API] Has MANAGE_GUILD: ${(guildInOAuth.permissions & 0x20) === 0x20}`
       );
     }
@@ -554,7 +587,7 @@ app.get("/api/guild/:guildId/channels", isAuthenticated, async (req, res) => {
     );
 
     if (!hasPermission) {
-      console.log(
+      logger.log(
         `[API] Denying channel access for guild ${guildId} - no permission`
       );
       return res
@@ -1098,6 +1131,6 @@ app.get("/api/invite", (req, res) => {
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🌐 Dashboard running on port ${PORT}`);
-  console.log(`📊 Access at: http://0.0.0.0:${PORT}`);
+  logger.log(`🌐 Dashboard running on port ${PORT}`);
+  logger.log(`📊 Access at: http://0.0.0.0:${PORT}`);
 });

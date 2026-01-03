@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logger } from "./utils.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_OAUTH_BASE = "https://id.twitch.tv/oauth2";
@@ -52,7 +53,7 @@ class TwitchAPI {
     } catch (error) {
       const errorMsg =
         error.response?.data?.error || error.message || String(error);
-      console.error(`❌ Error fetching Twitch user ${username}: ${errorMsg}`);
+      logger.error(`Error fetching Twitch user ${username}: ${errorMsg}`);
       return null;
     }
   }
@@ -88,9 +89,7 @@ class TwitchAPI {
     } catch (error) {
       const errorMsg =
         error.response?.data?.error || error.message || String(error);
-      console.error(
-        `❌ Error fetching stream info for ${username}: ${errorMsg}`
-      );
+      logger.error(`Error fetching stream info for ${username}: ${errorMsg}`);
       return null;
     }
   }
@@ -107,7 +106,7 @@ class TwitchAPI {
       });
       return response.status === 200;
     } catch (error) {
-      console.error("❌ Invalid Twitch credentials:", error.message);
+      logger.error("Invalid Twitch credentials:", error.message);
       return false;
     }
   }

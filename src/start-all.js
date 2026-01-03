@@ -1,11 +1,12 @@
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { logger } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.log("🚀 Starting Bot and Dashboard...\n");
+logger.log("🚀 Starting Bot and Dashboard...\n");
 
 // Start the bot
 const bot = spawn("node", [join(__dirname, "index.js")], {
@@ -20,19 +21,19 @@ const dashboard = spawn("node", [join(__dirname, "dashboard.js")], {
 });
 
 bot.on("close", (code) => {
-  console.log(`🤖 Bot process exited with code ${code}`);
+  logger.log(`🤖 Bot process exited with code ${code}`);
   dashboard.kill();
   process.exit(code);
 });
 
 dashboard.on("close", (code) => {
-  console.log(`🌐 Dashboard process exited with code ${code}`);
+  logger.log(`🌐 Dashboard process exited with code ${code}`);
   bot.kill();
   process.exit(code);
 });
 
 process.on("SIGINT", () => {
-  console.log("\n⏹️  Shutting down...");
+  logger.log("\n⏹️  Shutting down...");
   bot.kill();
   dashboard.kill();
   process.exit(0);
