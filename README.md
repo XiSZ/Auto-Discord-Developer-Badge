@@ -23,8 +23,8 @@ Discord requires at least one slash command to be used within the past 60 days t
 ### 0. Clone the Repository
 
 ```bash
-git clone https://github.com/HenryLok0/Auto-Discord-Developer-Badge.git
-cd Auto-Discord-Developer-Badge
+git clone https://github.com/XiSZ/DiscordBot.git
+cd DiscordBot
 ```
 
 ### 1. Create Discord Application
@@ -279,8 +279,8 @@ Discord requires at least one slash command to be used within the past 60 days t
 ### 0. Clone the Repository
 
 ```bash
-git clone https://github.com/HenryLok0/Auto-Discord-Developer-Badge.git
-cd Auto-Discord-Developer-Badge
+git clone https://github.com/XiSZ/DiscordBot.git
+cd DiscordBot
 ```
 
 ### 1. Create Discord Application
