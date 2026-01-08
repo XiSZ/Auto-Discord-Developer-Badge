@@ -8,16 +8,14 @@ const __dirname = dirname(__filename);
 
 logger.log("🚀 Starting Bot and Dashboard...\n");
 
-// Start the bot
-const bot = spawn("node", [join(__dirname, "index.js")], {
+// Start the bot using the current Node executable for cross-shell reliability
+const bot = spawn(process.execPath, [join(__dirname, "index.js")], {
   stdio: "inherit",
-  shell: true,
 });
 
-// Start the dashboard
-const dashboard = spawn("node", [join(__dirname, "dashboard.js")], {
+// Start the dashboard using the current Node executable
+const dashboard = spawn(process.execPath, [join(__dirname, "dashboard.js")], {
   stdio: "inherit",
-  shell: true,
 });
 
 bot.on("close", (code) => {

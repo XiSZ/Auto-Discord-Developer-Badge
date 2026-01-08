@@ -370,7 +370,8 @@ function startControlApi() {
   });
 
   // Bind to localhost only for safety
-  if (!process.env.DISABLE_CONTROL_API) {
+  const controlApiDisabled = process.env.DISABLE_CONTROL_API === "true";
+  if (!controlApiDisabled) {
     app.listen(CONTROL_PORT, "127.0.0.1", () => {
       logger.log(`[Control API] Started on 127.0.0.1:${CONTROL_PORT}`);
       logger.log(

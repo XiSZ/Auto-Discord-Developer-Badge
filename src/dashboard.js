@@ -1132,5 +1132,6 @@ app.get("/api/invite", (req, res) => {
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
   logger.log(`🌐 Dashboard running on port ${PORT}`);
-  logger.log(`📊 Access at: http://0.0.0.0:${PORT}`);
+  logger.log(`📊 Access at: http://localhost:${PORT}`);
+  logger.log(`   Or use: http://127.0.0.1:${PORT}`);
 });
