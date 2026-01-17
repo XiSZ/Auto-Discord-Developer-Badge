@@ -74,7 +74,7 @@ function clampIntervalDays(value) {
 let AUTO_EXECUTE_INTERVAL_DAYS = clampIntervalDays(
   process.env.AUTO_EXECUTE_INTERVAL_DAYS ||
     process.env.AUTO_EXECUTION_INTERVAL_DAYS ||
-    DEFAULT_AUTO_EXECUTION_DAYS
+    DEFAULT_AUTO_EXECUTION_DAYS,
 );
 let AUTO_EXECUTE_INTERVAL_MS = AUTO_EXECUTE_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 
@@ -182,12 +182,12 @@ function startControlApi() {
   logger.log(
     `[Control API] TOKEN: ${
       TOKEN ? "SET (length: " + TOKEN.length + ")" : "NOT SET"
-    }`
+    }`,
   );
   logger.log(
     `[Control API] SESSION_SECRET: ${
       process.env.SESSION_SECRET ? "SET" : "NOT SET"
-    }`
+    }`,
   );
 
   const app = express();
@@ -204,7 +204,7 @@ function startControlApi() {
       return next();
     }
     logger.log(
-      `[Control API] Auth failed - received: "${tok}", expected: "${TOKEN}"`
+      `[Control API] Auth failed - received: "${tok}", expected: "${TOKEN}"`,
     );
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -326,7 +326,7 @@ function startControlApi() {
       logger.log(
         `[Control API] /control/guilds: Returning ${
           guilds.length
-        } guilds (IDs: ${guilds.map((g) => g.id).join(", ") || "none"})`
+        } guilds (IDs: ${guilds.map((g) => g.id).join(", ") || "none"})`,
       );
       res.json(guilds);
     } catch (e) {
@@ -375,12 +375,12 @@ function startControlApi() {
     app.listen(CONTROL_PORT, "127.0.0.1", () => {
       logger.log(`[Control API] Started on 127.0.0.1:${CONTROL_PORT}`);
       logger.log(
-        `[Control API] Bot has access to ${client.guilds.cache.size} guilds`
+        `[Control API] Bot has access to ${client.guilds.cache.size} guilds`,
       );
       logger.log(
         `[Control API] Guild IDs: ${
           Array.from(client.guilds.cache.keys()).join(", ") || "none"
-        }`
+        }`,
       );
       logger.info(`Control API listening on 127.0.0.1:${CONTROL_PORT}`);
     });
@@ -406,7 +406,7 @@ function ensureServerDirectory(guildId) {
       mkdirSync(serverDir, { recursive: true });
     } catch (error) {
       logger.error(
-        `Failed to create server directory for ${guildId}: ${error.message}`
+        `Failed to create server directory for ${guildId}: ${error.message}`,
       );
     }
   }
@@ -466,7 +466,7 @@ function loadTwitchData(suppressLog = false) {
                   typeof state.lastNotified === "object"
                 ) {
                   for (const [streamer, dateStr] of Object.entries(
-                    state.lastNotified
+                    state.lastNotified,
                   )) {
                     map.set(streamer, dateStr);
                   }
@@ -475,7 +475,7 @@ function loadTwitchData(suppressLog = false) {
               }
             } catch (stateErr) {
               logger.warn(
-                `Could not load Twitch notification state for ${guildId}: ${stateErr.message}`
+                `Could not load Twitch notification state for ${guildId}: ${stateErr.message}`,
               );
             }
 
@@ -485,7 +485,7 @@ function loadTwitchData(suppressLog = false) {
           }
         } catch (error) {
           logger.error(
-            `Error loading config for guild ${guildId}: ${error.message}`
+            `Error loading config for guild ${guildId}: ${error.message}`,
           );
         }
       }
@@ -495,7 +495,7 @@ function loadTwitchData(suppressLog = false) {
       logConfigurationStatus(
         "Twitch configuration",
         loadedCount,
-        loadedServers
+        loadedServers,
       );
     }
   } catch (error) {
@@ -586,7 +586,7 @@ function loadBadgeSettings(applyRuntime = false, source = "disk") {
       logger.info(
         `[Badge] Reloaded settings from ${source}; auto-execution is ${
           autoExecutionEnabled ? "enabled" : "disabled"
-        } (interval ${AUTO_EXECUTE_INTERVAL_DAYS} day(s))`
+        } (interval ${AUTO_EXECUTE_INTERVAL_DAYS} day(s))`,
       );
     }
 
@@ -608,7 +608,7 @@ function saveTwitchState(guildId) {
     writeFileSync(statePath, JSON.stringify(payload, null, 2), "utf-8");
   } catch (e) {
     logger.warn(
-      `Failed to persist Twitch state for guild ${guildId}: ${e.message}`
+      `Failed to persist Twitch state for guild ${guildId}: ${e.message}`,
     );
   }
 }
@@ -653,7 +653,7 @@ function saveTwitchData(guildId) {
     saveConfigFile(configPath, data, "Twitch configuration", guildId);
   } catch (error) {
     logger.error(
-      `Failed to save Twitch data for server ${guildId}: ${error.message}`
+      `Failed to save Twitch data for server ${guildId}: ${error.message}`,
     );
   }
 }
@@ -675,7 +675,7 @@ function saveTranslationConfig(guildId) {
     saveConfigFile(configPath, data, "translation configuration", guildId);
   } catch (error) {
     logger.error(
-      `Failed to save translation config for server ${guildId}: ${error.message}`
+      `Failed to save translation config for server ${guildId}: ${error.message}`,
     );
   }
 }
@@ -713,7 +713,7 @@ function loadTranslationData(suppressLog = false) {
           }
         } catch (error) {
           logger.error(
-            `Failed to parse translation config for server ${guildId}: ${error.message}`
+            `Failed to parse translation config for server ${guildId}: ${error.message}`,
           );
         }
       }
@@ -723,7 +723,7 @@ function loadTranslationData(suppressLog = false) {
       logConfigurationStatus(
         "translation configurations",
         loadedCount,
-        loadedServers
+        loadedServers,
       );
     }
   } catch (error) {
@@ -791,7 +791,7 @@ function recordTranslation(guildId, fromLang, toLang, channelId) {
   const pairKey = `${fromLang}->${toLang}`;
   stats.byLanguagePair.set(
     pairKey,
-    (stats.byLanguagePair.get(pairKey) || 0) + 1
+    (stats.byLanguagePair.get(pairKey) || 0) + 1,
   );
   stats.byChannel.set(channelId, (stats.byChannel.get(channelId) || 0) + 1);
 
@@ -814,7 +814,7 @@ function saveTranslationStats(guildId) {
     saveConfigFile(configPath, data, "translation stats", guildId);
   } catch (error) {
     logger.error(
-      `Failed to save translation stats for server ${guildId}: ${error.message}`
+      `Failed to save translation stats for server ${guildId}: ${error.message}`,
     );
   }
 }
@@ -839,7 +839,7 @@ function loadTranslationStats() {
             translationStats.set(guildId, {
               total: data.total || 0,
               byLanguagePair: new Map(
-                Object.entries(data.byLanguagePair || {})
+                Object.entries(data.byLanguagePair || {}),
               ),
               byChannel: new Map(Object.entries(data.byChannel || {})),
             });
@@ -847,7 +847,7 @@ function loadTranslationStats() {
           }
         } catch (error) {
           logger.error(
-            `Failed to parse translation stats for server ${guildId}: ${error.message}`
+            `Failed to parse translation stats for server ${guildId}: ${error.message}`,
           );
         }
       }
@@ -1080,7 +1080,7 @@ function loadTrackingData(suppressLog = false) {
         } catch (error) {
           logger.error(
             `❌ Error loading tracking config for guild ${guildId}:`,
-            error.message
+            error.message,
           );
         }
       }
@@ -1090,7 +1090,7 @@ function loadTrackingData(suppressLog = false) {
       logConfigurationStatus(
         "tracking configuration",
         loadedCount,
-        loadedServers
+        loadedServers,
       );
     }
   } catch (error) {
@@ -1134,7 +1134,7 @@ function saveTrackingData(guildId) {
     saveConfigFile(configPath, data, "tracking configuration", guildId);
   } catch (error) {
     logger.error(
-      `Failed to save tracking config for server ${guildId}: ${error.message}`
+      `Failed to save tracking config for server ${guildId}: ${error.message}`,
     );
   }
 }
@@ -1164,8 +1164,8 @@ function hasPermissionOrRole(member, permission) {
   // Check if user has any moderator role
   const hasModerationRole = member.roles.cache.some((role) =>
     MODERATOR_ROLE_NAMES.some(
-      (modRoleName) => role.name.toLowerCase() === modRoleName.toLowerCase()
-    )
+      (modRoleName) => role.name.toLowerCase() === modRoleName.toLowerCase(),
+    ),
   );
 
   return hasModerationRole;
@@ -1186,7 +1186,7 @@ function createTrackingEmbed(
   title,
   description,
   user = null,
-  color = 0x3498db
+  color = 0x3498db,
 ) {
   const embed = new EmbedBuilder()
     .setTitle(title)
@@ -1205,7 +1205,7 @@ function createTrackingEmbed(
         name: "Tag",
         value: user.tag || "Unknown",
         inline: true,
-      }
+      },
     );
     if (user.avatar) {
       embed.setThumbnail(user.displayAvatarURL({ size: 128 }));
@@ -1221,7 +1221,7 @@ async function logTrackingEvent(
   message,
   embed = null,
   eventType = null,
-  channelId = null
+  channelId = null,
 ) {
   if (!isTrackingEnabled(guildId)) return;
 
@@ -1306,7 +1306,7 @@ async function autoExecuteCommand() {
     const textChannel = channels.find(
       (channel) =>
         channel.type === 0 &&
-        channel.permissionsFor(guild.members.me).has("SendMessages")
+        channel.permissionsFor(guild.members.me).has("SendMessages"),
     );
 
     if (!textChannel) {
@@ -1316,7 +1316,7 @@ async function autoExecuteCommand() {
 
     // Send a message to log auto-execution
     logger.log(
-      "🤖 Auto-executing ping command to maintain application active status..."
+      "🤖 Auto-executing ping command to maintain application active status...",
     );
 
     await textChannel.send({
@@ -1327,12 +1327,12 @@ async function autoExecuteCommand() {
     lastExecutionTime = Date.now();
     saveBadgeSettings();
     const nextExecutionDate = new Date(
-      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS,
     );
     logger.log(
       `✅ Auto-execution completed! Next execution time: ${nextExecutionDate.toLocaleString(
-        "en-US"
-      )}`
+        "en-US",
+      )}`,
     );
   } catch (error) {
     logger.error("❌ Error during auto-execution:", error);
@@ -1356,10 +1356,10 @@ function checkAndExecute() {
   } else {
     const daysRemaining = Math.ceil(
       (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastExecution) /
-        (24 * 60 * 60 * 1000)
+        (24 * 60 * 60 * 1000),
     );
     logger.log(
-      `⏳ ${daysRemaining} day(s) remaining until next auto-execution`
+      `⏳ ${daysRemaining} day(s) remaining until next auto-execution`,
     );
   }
 }
@@ -1453,17 +1453,17 @@ function setupAutoExecution() {
   }, CHECK_INTERVAL);
 
   logger.log(
-    `⏰ Auto-execution schedule set, will execute every ${AUTO_EXECUTE_INTERVAL_DAYS} days`
+    `⏰ Auto-execution schedule set, will execute every ${AUTO_EXECUTE_INTERVAL_DAYS} days`,
   );
   logger.log(`🔍 Checking every 24 hours if execution is needed`);
 
   const nextExecutionDate = new Date(
-    lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+    lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS,
   );
   logger.log(
     `📅 Next scheduled execution time: ${nextExecutionDate.toLocaleString(
-      "en-US"
-    )}`
+      "en-US",
+    )}`,
   );
 }
 
@@ -1531,15 +1531,15 @@ async function checkTwitchStreamers() {
               {
                 name: "Started",
                 value: `<t:${Math.floor(
-                  new Date(streamInfo.started_at).getTime() / 1000
+                  new Date(streamInfo.started_at).getTime() / 1000,
                 )}:R>`,
                 inline: false,
-              }
+              },
             )
             .setImage(
               streamInfo.thumbnail_url
                 .replace("{width}", "640")
-                .replace("{height}", "360")
+                .replace("{height}", "360"),
             )
             .setTimestamp();
 
@@ -1549,7 +1549,7 @@ async function checkTwitchStreamers() {
           });
 
           logger.log(
-            `🔴 Sent live notification for ${streamInfo.user_name} in guild ${guildId}`
+            `🔴 Sent live notification for ${streamInfo.user_name} in guild ${guildId}`,
           );
 
           // Record notification date and persist
@@ -1564,7 +1564,7 @@ async function checkTwitchStreamers() {
     } catch (error) {
       logger.error(
         `❌ Error checking Twitch streamers for guild ${guildId}:`,
-        error
+        error,
       );
     }
   }
@@ -1599,8 +1599,8 @@ function openInviteBotGuide() {
     process.platform === "win32"
       ? `start "" "${htmlPath}"`
       : process.platform === "darwin"
-      ? `open "${htmlPath}"`
-      : `xdg-open "${htmlPath}"`;
+        ? `open "${htmlPath}"`
+        : `xdg-open "${htmlPath}"`;
 
   exec(command, (error) => {
     if (error) {
@@ -1645,6 +1645,7 @@ function requiresGuild(interaction, commandName) {
     "unlock",
     "slowmode",
     "purge",
+    "nuke",
     "logs",
     "banlist",
     "clear-warnings",
@@ -1681,7 +1682,7 @@ client.once("clientReady", () => {
   logger.log(`🤖 Logged in as: ${client.user.tag}`);
 
   const serverList = client.guilds.cache.map((guild) =>
-    formatServerInfo(guild.id)
+    formatServerInfo(guild.id),
   );
 
   logger.log(`📊 Joined ${client.guilds.cache.size} server(s):`);
@@ -1715,7 +1716,7 @@ client.once("clientReady", () => {
   if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_ACCESS_TOKEN) {
     twitchAPI = new TwitchAPI(
       process.env.TWITCH_CLIENT_ID,
-      process.env.TWITCH_ACCESS_TOKEN
+      process.env.TWITCH_ACCESS_TOKEN,
     );
     loadTwitchData();
 
@@ -1723,7 +1724,7 @@ client.once("clientReady", () => {
     setInterval(checkTwitchStreamers, 300000);
   } else {
     logger.log(
-      "⚠️ Twitch notifications disabled (missing TWITCH_CLIENT_ID or TWITCH_ACCESS_TOKEN in .env)"
+      "⚠️ Twitch notifications disabled (missing TWITCH_CLIENT_ID or TWITCH_ACCESS_TOKEN in .env)",
     );
   }
 
@@ -1805,6 +1806,7 @@ client.on("interactionCreate", async (interaction) => {
         `\`/unlock\` – Unlock current channel\n` +
         `\`/slowmode <seconds>\` – Set channel slowmode (0 to disable)\n` +
         `\`/purge [amount]\` – Delete messages from channel\n` +
+        `\`/nuke\` – ⚠️ Delete ALL messages in channel (Admin/Mod only)\n` +
         `\`/channel-create <name> [topic]\` – Create a new channel\n` +
         `\`/channel-delete [channel]\` – Delete a channel\n` +
         `\n**Role Management:**\n` +
@@ -1860,7 +1862,7 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
     logger.log(
-      `✅ ${interaction.user.tag} executed help command${isDM ? " (DM)" : ""}`
+      `✅ ${interaction.user.tag} executed help command${isDM ? " (DM)" : ""}`,
     );
   }
 
@@ -1873,7 +1875,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const timeSinceLastAuto = Date.now() - lastExecutionTime;
     const daysUntilNext = Math.ceil(
-      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24)
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24),
     );
 
     const autoExecutionLine = autoExecutionEnabled
@@ -1897,7 +1899,7 @@ client.on("interactionCreate", async (interaction) => {
     const uptime = Date.now() - botStartTime;
     const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
     const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((uptime % (1000 * 60)) / 1000);
@@ -2040,7 +2042,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🗑️ ${interaction.user.tag} purged ${deletedCount} messages in #${channel.name}`
+        `🗑️ ${interaction.user.tag} purged ${deletedCount} messages in #${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error purging messages:", error);
@@ -2050,18 +2052,98 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
+  // Nuke command - Delete ALL messages in channel (Admin/Mod only)
+  if (interaction.commandName === "nuke") {
+    if (requiresGuild(interaction, "nuke")) return;
+
+    // Check if user is admin or moderator
+    if (!hasPermissionOrRole(interaction.member, "Administrator")) {
+      await interaction.reply({
+        content:
+          '❌ You need the "Administrator" permission or a Moderator role to use this command.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Check if bot has permission to manage messages
+    if (!interaction.guild.members.me.permissions.has("ManageMessages")) {
+      await interaction.reply({
+        content:
+          '❌ I need the "Manage Messages" permission to delete messages.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const channel = interaction.channel;
+      let deletedCount = 0;
+      let totalAttempts = 0;
+      const maxAttempts = 100; // Safety limit to prevent infinite loops
+
+      // Delete all messages in batches of 100
+      let fetchedMessages;
+      do {
+        fetchedMessages = await channel.messages.fetch({ limit: 100 });
+        if (fetchedMessages.size > 0) {
+          const deleted = await channel.bulkDelete(fetchedMessages, true);
+          deletedCount += deleted.size;
+          totalAttempts++;
+
+          // If we deleted fewer than fetched, we've hit messages older than 14 days
+          if (deleted.size < fetchedMessages.size) {
+            break;
+          }
+        }
+
+        // Safety check to prevent infinite loops
+        if (totalAttempts >= maxAttempts) {
+          break;
+        }
+      } while (fetchedMessages.size > 0);
+
+      await interaction.editReply({
+        content:
+          `💥 **Channel Nuked!**\n` +
+          `✅ Successfully deleted ${deletedCount} message(s).\n` +
+          `${
+            totalAttempts >= maxAttempts
+              ? "⚠️ Reached safety limit. Some messages may remain.\n"
+              : ""
+          }` +
+          `${
+            fetchedMessages.size > 0
+              ? "⚠️ Note: Messages older than 14 days cannot be bulk deleted."
+              : ""
+          }`,
+      });
+
+      logger.log(
+        `💥 ${interaction.user.tag} nuked #${channel.name} - deleted ${deletedCount} messages`,
+      );
+    } catch (error) {
+      logger.error("❌ Error nuking channel:", error);
+      await interaction.editReply({
+        content: `❌ An error occurred while nuking the channel: ${error.message}`,
+      });
+    }
+  }
+
   // Status command - Badge-specific info
   if (interaction.commandName === "status") {
     const timeSinceLastAuto = Date.now() - lastExecutionTime;
     const daysUntilNext = Math.ceil(
-      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24)
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24),
     );
     const hoursUntilNext = Math.ceil(
       ((AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) % (1000 * 60 * 60 * 24)) /
-        (1000 * 60 * 60)
+        (1000 * 60 * 60),
     );
     const nextExecutionDate = new Date(
-      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS,
     );
 
     const nextExecutionText = autoExecutionEnabled
@@ -2076,7 +2158,7 @@ client.on("interactionCreate", async (interaction) => {
         `🎖️ **Active Developer Badge Status**\n` +
         `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
         `📅 Last auto-execution: <t:${Math.floor(
-          lastExecutionTime / 1000
+          lastExecutionTime / 1000,
         )}:R>\n` +
         `⏰ Next scheduled: ${nextExecutionText}\n` +
         `⏳ Time remaining: ${timeRemainingText}\n` +
@@ -2100,7 +2182,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const subcommand = interaction.options.getSubcommand();
     const nextExecutionDate = new Date(
-      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+      lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS,
     );
 
     if (subcommand === "enable") {
@@ -2133,11 +2215,11 @@ client.on("interactionCreate", async (interaction) => {
     // status subcommand
     const timeSinceLastAuto = Date.now() - lastExecutionTime;
     const daysUntilNext = Math.ceil(
-      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24)
+      (AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) / (1000 * 60 * 60 * 24),
     );
     const hoursUntilNext = Math.ceil(
       ((AUTO_EXECUTE_INTERVAL_MS - timeSinceLastAuto) % (1000 * 60 * 60 * 24)) /
-        (1000 * 60 * 60)
+        (1000 * 60 * 60),
     );
 
     await interaction.reply({
@@ -2213,7 +2295,7 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
       logger.log(
-        `✅ ${interaction.user.tag} executed userinfo (DM) for ${user.tag}`
+        `✅ ${interaction.user.tag} executed userinfo (DM) for ${user.tag}`,
       );
       return;
     }
@@ -2242,7 +2324,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `✅ ${interaction.user.tag} executed userinfo command for ${user.tag}`
+      `✅ ${interaction.user.tag} executed userinfo command for ${user.tag}`,
     );
   }
 
@@ -2289,7 +2371,7 @@ client.on("interactionCreate", async (interaction) => {
         interaction.guild.roles.everyone,
         {
           SendMessages: false,
-        }
+        },
       );
 
       await interaction.reply({
@@ -2325,7 +2407,7 @@ client.on("interactionCreate", async (interaction) => {
         interaction.guild.roles.everyone,
         {
           SendMessages: null,
-        }
+        },
       );
 
       await interaction.reply({
@@ -2333,7 +2415,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🔓 ${interaction.user.tag} unlocked channel #${channel.name}`
+        `🔓 ${interaction.user.tag} unlocked channel #${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error unlocking channel:", error);
@@ -2371,7 +2453,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({ content: message });
 
       logger.log(
-        `⏱️ ${interaction.user.tag} set slowmode to ${seconds}s in #${channel.name}`
+        `⏱️ ${interaction.user.tag} set slowmode to ${seconds}s in #${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error setting slowmode:", error);
@@ -2505,7 +2587,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🔇 ${interaction.user.tag} muted ${user.tag} for ${minutes}m: ${reason}`
+        `🔇 ${interaction.user.tag} muted ${user.tag} for ${minutes}m: ${reason}`,
       );
     } catch (error) {
       logger.error("❌ Error muting user:", error);
@@ -2615,7 +2697,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `💬 ${interaction.user.tag} sent a message via /say in #${channel.name}`
+        `💬 ${interaction.user.tag} sent a message via /say in #${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error sending message:", error);
@@ -2639,7 +2721,7 @@ client.on("interactionCreate", async (interaction) => {
       const option5 = interaction.options.getString("option5");
 
       const options = [option1, option2, option3, option4, option5].filter(
-        Boolean
+        Boolean,
       );
       const emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
 
@@ -2679,18 +2761,21 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      setTimeout(async () => {
-        try {
-          await user.send(
-            `⏰ **Reminder from ${minutes} minute(s) ago:** ${reminder}`
-          );
-        } catch (error) {
-          logger.error("❌ Could not send reminder DM:", error);
-        }
-      }, minutes * 60 * 1000);
+      setTimeout(
+        async () => {
+          try {
+            await user.send(
+              `⏰ **Reminder from ${minutes} minute(s) ago:** ${reminder}`,
+            );
+          } catch (error) {
+            logger.error("❌ Could not send reminder DM:", error);
+          }
+        },
+        minutes * 60 * 1000,
+      );
 
       logger.log(
-        `⏰ ${interaction.user.tag} set a reminder: ${reminder} (${minutes}m)`
+        `⏰ ${interaction.user.tag} set a reminder: ${reminder} (${minutes}m)`,
       );
     } catch (error) {
       logger.error("❌ Error setting reminder:", error);
@@ -2786,7 +2871,7 @@ client.on("interactionCreate", async (interaction) => {
       let logsContent =
         `📋 **Recent Server Actions** (Last ${Math.min(
           lines,
-          auditLogs.entries.size
+          auditLogs.entries.size,
         )} actions)\n` + `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 
       if (auditLogs.entries.size === 0) {
@@ -2835,7 +2920,7 @@ client.on("interactionCreate", async (interaction) => {
       try {
         const guildId = interaction.guild.id;
         const nextExecDate = new Date(
-          lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS
+          lastExecutionTime + AUTO_EXECUTE_INTERVAL_MS,
         );
 
         const configContent =
@@ -2941,7 +3026,7 @@ client.on("interactionCreate", async (interaction) => {
       const message = interaction.options.getString("message");
 
       await user.send(
-        `📬 **Notification from ${interaction.user.tag}:**\n${message}`
+        `📬 **Notification from ${interaction.user.tag}:**\n${message}`,
       );
 
       await interaction.reply({
@@ -2985,7 +3070,7 @@ client.on("interactionCreate", async (interaction) => {
       const role = interaction.options.getRole("role");
       const createdAt = Math.floor(role.createdTimestamp / 1000);
       const memberCount = interaction.guild.members.cache.filter((m) =>
-        m.roles.cache.has(role.id)
+        m.roles.cache.has(role.id),
       ).size;
 
       const roleInfo =
@@ -3006,7 +3091,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🏷️ ${interaction.user.tag} viewed info for role: ${role.name}`
+        `🏷️ ${interaction.user.tag} viewed info for role: ${role.name}`,
       );
     } catch (error) {
       logger.error("❌ Error fetching role info:", error);
@@ -3042,7 +3127,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `💬 ${interaction.user.tag} viewed info for channel: ${channel.name}`
+        `💬 ${interaction.user.tag} viewed info for channel: ${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error fetching channel info:", error);
@@ -3059,12 +3144,12 @@ client.on("interactionCreate", async (interaction) => {
       const uptime = Date.now() - botStartTime;
       const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
       );
       const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((uptime % (1000 * 60)) / 1000);
       const percentage = ((uptime / (30 * 24 * 60 * 60 * 1000)) * 100).toFixed(
-        2
+        2,
       );
 
       const uptimeRank =
@@ -3076,8 +3161,8 @@ client.on("interactionCreate", async (interaction) => {
           uptime > 25 * 24 * 60 * 60 * 1000
             ? "⭐⭐⭐ Excellent"
             : uptime > 20 * 24 * 60 * 60 * 1000
-            ? "⭐⭐ Good"
-            : "⭐ Fair"
+              ? "⭐⭐ Good"
+              : "⭐ Fair"
         }`;
 
       await interaction.reply({
@@ -3213,7 +3298,7 @@ client.on("interactionCreate", async (interaction) => {
       logger.log(
         `🔄 ${interaction.user.tag} ${
           enabled ? "enabled" : "disabled"
-        } tracking in ${interaction.guild.name}`
+        } tracking in ${interaction.guild.name}`,
       );
     } else if (subcommand === "channel") {
       const channel = interaction.options.getChannel("channel");
@@ -3243,7 +3328,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🔄 ${interaction.user.tag} set tracking channel to #${channel.name} in ${interaction.guild.name}`
+        `🔄 ${interaction.user.tag} set tracking channel to #${channel.name} in ${interaction.guild.name}`,
       );
     } else if (subcommand === "status") {
       const config = trackingConfig.get(guildId);
@@ -3342,7 +3427,7 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
         logger.log(
-          `🔄 ${interaction.user.tag} removed ${channel.name} from ignore list in ${interaction.guild.name}`
+          `🔄 ${interaction.user.tag} removed ${channel.name} from ignore list in ${interaction.guild.name}`,
         );
       } else {
         ignoredChannels.push(channel.id);
@@ -3351,7 +3436,7 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
         logger.log(
-          `🔄 ${interaction.user.tag} added ${channel.name} to ignore list in ${interaction.guild.name}`
+          `🔄 ${interaction.user.tag} added ${channel.name} to ignore list in ${interaction.guild.name}`,
         );
       }
 
@@ -3430,7 +3515,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🔄 ${interaction.user.tag} updated tracking events in ${interaction.guild.name}`
+        `🔄 ${interaction.user.tag} updated tracking events in ${interaction.guild.name}`,
       );
     }
   }
@@ -3494,7 +3579,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `✅ Added Twitch streamer ${streamerName} to ${interaction.guild.name}`
+        `✅ Added Twitch streamer ${streamerName} to ${interaction.guild.name}`,
       );
     } else if (subcommand === "remove") {
       const streamerName = interaction.options
@@ -3528,7 +3613,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `✅ Removed Twitch streamer ${streamerName} from ${interaction.guild.name}`
+        `✅ Removed Twitch streamer ${streamerName} from ${interaction.guild.name}`,
       );
     } else if (subcommand === "list") {
       const streamers = twitchStreamers.get(guildId);
@@ -3578,7 +3663,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`
+        `🔄 ${interaction.user.tag} set Twitch notification channel to #${channel.name}`,
       );
     } else if (subcommand === "duplicates") {
       const allow = interaction.options.getBoolean("allow");
@@ -3599,7 +3684,7 @@ client.on("interactionCreate", async (interaction) => {
           interaction.user.tag
         } set Twitch duplicate notifications to ${allow} in guild ${
           interaction.guild.name
-        } (channel: ${channel || "not set"})`
+        } (channel: ${channel || "not set"})`,
       );
     }
   }
@@ -3663,7 +3748,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🎲 ${interaction.user.tag} rolled ${rolls}d${sides}: ${resultText}`
+      `🎲 ${interaction.user.tag} rolled ${rolls}d${sides}: ${resultText}`,
     );
   }
 
@@ -3788,7 +3873,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `✅ ${interaction.user.tag} assigned ${role.name} to ${user.tag}`
+        `✅ ${interaction.user.tag} assigned ${role.name} to ${user.tag}`,
       );
     } catch (error) {
       logger.error("❌ Error assigning role:", error);
@@ -3832,7 +3917,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `✅ ${interaction.user.tag} removed ${role.name} from ${user.tag}`
+        `✅ ${interaction.user.tag} removed ${role.name} from ${user.tag}`,
       );
     } catch (error) {
       logger.error("❌ Error removing role:", error);
@@ -3951,7 +4036,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `${interaction.user.tag} configured welcome message for #${channel.name}`
+      `${interaction.user.tag} configured welcome message for #${channel.name}`,
     );
   }
 
@@ -4022,7 +4107,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       logger.log(
-        `📢 ${interaction.user.tag} made an announcement in #${channel.name}`
+        `📢 ${interaction.user.tag} made an announcement in #${channel.name}`,
       );
     } catch (error) {
       logger.error("❌ Error sending announcement:", error);
@@ -4040,7 +4125,7 @@ client.on("interactionCreate", async (interaction) => {
 
     try {
       await user.send(
-        `🔔 **Message from ${interaction.user.tag} in ${interaction.guild.name}**\n━━━━━━━━━━━━━━━━━\n${message}`
+        `🔔 **Message from ${interaction.user.tag} in ${interaction.guild.name}**\n━━━━━━━━━━━━━━━━━\n${message}`,
       );
 
       await interaction.reply({
@@ -4089,7 +4174,7 @@ client.on("interactionCreate", async (interaction) => {
     try {
       const owner = await interaction.guild.fetchOwner();
       await owner.send(
-        `💡 **New Suggestion** from ${interaction.user.tag} (${interaction.guild.name})\n━━━━━━━━━━━━━━━━━\n${suggestion}`
+        `💡 **New Suggestion** from ${interaction.user.tag} (${interaction.guild.name})\n━━━━━━━━━━━━━━━━━\n${suggestion}`,
       );
     } catch (error) {
       logger.log("Could not send suggestion to owner, logging instead");
@@ -4101,7 +4186,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `💡 ${interaction.user.tag} submitted a suggestion: ${suggestion}`
+      `💡 ${interaction.user.tag} submitted a suggestion: ${suggestion}`,
     );
   }
 
@@ -4124,7 +4209,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `📊 ${interaction.user.tag} viewed command activity for ${days} days`
+      `📊 ${interaction.user.tag} viewed command activity for ${days} days`,
     );
   }
 
@@ -4159,7 +4244,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} enabled translation in ${channel.name} (${guildId})`
+      `🌐 ${interaction.user.tag} enabled translation in ${channel.name} (${guildId})`,
     );
   }
 
@@ -4190,7 +4275,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `⚙️ ${interaction.user.tag} updated translation config for guild ${guildId}`
+      `⚙️ ${interaction.user.tag} updated translation config for guild ${guildId}`,
     );
   }
 
@@ -4214,7 +4299,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} set translation output channel to ${outputChannel.name} (${guildId})`
+      `🌐 ${interaction.user.tag} set translation output channel to ${outputChannel.name} (${guildId})`,
     );
   }
 
@@ -4237,7 +4322,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} cleared translation output channel (${guildId})`
+      `🌐 ${interaction.user.tag} cleared translation output channel (${guildId})`,
     );
   }
 
@@ -4272,7 +4357,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} added language ${language} (${guildId})`
+      `🌐 ${interaction.user.tag} added language ${language} (${guildId})`,
     );
   }
 
@@ -4303,7 +4388,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     config.targetLanguages = config.targetLanguages.filter(
-      (l) => l !== language
+      (l) => l !== language,
     );
 
     // Save configuration
@@ -4317,7 +4402,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} removed language ${language} (${guildId})`
+      `🌐 ${interaction.user.tag} removed language ${language} (${guildId})`,
     );
   }
 
@@ -4364,7 +4449,7 @@ client.on("interactionCreate", async (interaction) => {
           name: "📍 Most Active Channels",
           value: topChannels || "(none)",
           inline: false,
-        }
+        },
       )
       .setFooter({ text: `Server: ${interaction.guild.name}` })
       .setTimestamp();
@@ -4400,7 +4485,7 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     logger.log(
-      `🌐 ${interaction.user.tag} disabled translation in ${channel.name} (${guildId})`
+      `🌐 ${interaction.user.tag} disabled translation in ${channel.name} (${guildId})`,
     );
   }
 
@@ -4508,7 +4593,7 @@ client.on("interactionCreate", async (interaction) => {
           {
             name: `Translation (${targetFlag} ${targetName} — ${toLang.toUpperCase()})`,
             value: result.text.substring(0, 1024),
-          }
+          },
         )
         .setFooter({ text: "Powered by Google Translate" })
         .setTimestamp();
@@ -4516,7 +4601,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.editReply({ embeds: [embed] });
 
       logger.log(
-        `🌐 ${interaction.user.tag} translated text: ${result.from.language.iso} → ${toLang}`
+        `🌐 ${interaction.user.tag} translated text: ${result.from.language.iso} → ${toLang}`,
       );
     } catch (error) {
       logger.error("Translation error:", error);
@@ -4552,14 +4637,14 @@ client.on("interactionCreate", async (interaction) => {
         eventName,
         description,
         interaction.user,
-        0x3498db
+        0x3498db,
       );
       await logTrackingEvent(
         interaction.guild.id,
         null,
         embed,
         "interactions",
-        interaction.channelId
+        interaction.channelId,
       );
     }
   }
@@ -4676,7 +4761,7 @@ client.on("messageCreate", async (message) => {
     const uptime = Date.now() - botStartTime;
     const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
     const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((uptime % (1000 * 60)) / 1000);
@@ -4720,13 +4805,13 @@ client.on("messageCreate", async (message) => {
       const member = message.member;
       if (!member?.permissions?.has?.("ManageGuild")) {
         await message.reply(
-          '❌ You need the "Manage Server" permission to change the prefix.'
+          '❌ You need the "Manage Server" permission to change the prefix.',
         );
         return;
       }
     } else {
       await message.reply(
-        "⚠️ Change the prefix from a server where you have Manage Server or use the dashboard."
+        "⚠️ Change the prefix from a server where you have Manage Server or use the dashboard.",
       );
       return;
     }
@@ -4790,7 +4875,7 @@ client.on("messageCreate", async (message) => {
 
     // Filter out target languages that match the source
     const languagesToTranslate = targetLanguages.filter(
-      (lang) => lang !== sourceLang
+      (lang) => lang !== sourceLang,
     );
 
     if (languagesToTranslate.length === 0) return;
@@ -4822,13 +4907,13 @@ client.on("messageCreate", async (message) => {
           targetChannel = await message.guild.channels.fetch(outputChannelId);
           if (!targetChannel) {
             logger.error(
-              `Output channel ${outputChannelId} not found in guild ${guildId}`
+              `Output channel ${outputChannelId} not found in guild ${guildId}`,
             );
             targetChannel = message.channel;
           }
         } catch (error) {
           logger.error(
-            `Failed to fetch output channel ${outputChannelId}: ${error.message}`
+            `Failed to fetch output channel ${outputChannelId}: ${error.message}`,
           );
           targetChannel = message.channel;
         }
@@ -4845,8 +4930,8 @@ client.on("messageCreate", async (message) => {
             `**Original (${sourceFlag} ${sourceName} — ${sourceLangUpper}):**\n${
               message.content
             }\n\n**Translation (${getLanguageFlag(
-              targetLang
-            )} ${targetLangUpper}):**\n${translatedText}`
+              targetLang,
+            )} ${targetLangUpper}):**\n${translatedText}`,
           )
           .setFooter({
             text: `Translated by Google Translate • ${sourceLangUpper} → ${targetLangUpper}`,
@@ -4871,7 +4956,7 @@ client.on("messageCreate", async (message) => {
         });
 
         let threadMessage = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLangUpper} to ${getLanguageFlag(
-          targetLang
+          targetLang,
         )} ${targetLangUpper}):**\n${translatedText}`;
         if (outputChannelId) {
           threadMessage += `\n\n**Source:** ${message.author.username} in <#${message.channel.id}>`;
@@ -4881,7 +4966,7 @@ client.on("messageCreate", async (message) => {
       } else {
         // Default: reply mode
         let replyText = `🌐 **Translation (from ${sourceFlag} ${sourceName} — ${sourceLangUpper} → ${getLanguageFlag(
-          targetLang
+          targetLang,
         )} ${targetLangUpper}):**\n${translatedText}`;
 
         // If sending to output channel, mention the original author
@@ -4915,14 +5000,14 @@ client.on("messageCreate", async (message) => {
       message.content?.substring(0, 200) || "(no content)"
     }${message.content?.length > 200 ? "..." : ""}`,
     message.author,
-    0x3498db
+    0x3498db,
   );
   await logTrackingEvent(
     message.guild.id,
     null,
     embed,
     "message",
-    message.channel.id
+    message.channel.id,
   );
 });
 
@@ -4935,14 +5020,14 @@ client.on("messageDelete", async (message) => {
       message.content?.substring(0, 200) || "(no content)"
     }${message.content?.length > 200 ? "..." : ""}`,
     message.author,
-    0xe74c3c
+    0xe74c3c,
   );
   await logTrackingEvent(
     message.guild.id,
     null,
     embed,
     "message",
-    message.channel.id
+    message.channel.id,
   );
 });
 
@@ -4953,7 +5038,7 @@ client.on("messageDeleteBulk", async (messages) => {
   const embed = new EmbedBuilder()
     .setTitle("🗑️ Bulk Messages Deleted")
     .setDescription(
-      `**Channel:** #${channel.name}\n**Count:** ${messages.size} messages deleted`
+      `**Channel:** #${channel.name}\n**Count:** ${messages.size} messages deleted`,
     )
     .setColor(0xe74c3c)
     .setTimestamp();
@@ -4975,14 +5060,14 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
       newMessage.content?.substring(0, 200) || "(no content)"
     }${newMessage.content?.length > 200 ? "..." : ""}\`\`\``,
     newMessage.author,
-    0xf39c12
+    0xf39c12,
   );
   await logTrackingEvent(
     newMessage.guild.id,
     null,
     embed,
     "message",
-    newMessage.channel.id
+    newMessage.channel.id,
   );
 });
 
@@ -4991,10 +5076,10 @@ client.on("guildMemberAdd", async (member) => {
   const embed = createTrackingEmbed(
     "➕ Member Joined",
     `**Account Created:** ${member.user.createdAt.toLocaleString()}\n**Join Timestamp:** <t:${Math.floor(
-      Date.now() / 1000
+      Date.now() / 1000,
     )}:F>`,
     member.user,
-    0x2ecc71
+    0x2ecc71,
   );
   await logTrackingEvent(member.guild.id, null, embed, "member", null);
 });
@@ -5005,7 +5090,7 @@ client.on("guildMemberRemove", async (member) => {
     "➖ Member Left",
     `**Leave Timestamp:** <t:${Math.floor(Date.now() / 1000)}:F>`,
     member.user,
-    0xe74c3c
+    0xe74c3c,
   );
   await logTrackingEvent(member.guild.id, null, embed, "member", null);
 });
@@ -5018,7 +5103,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
     changes.push(
       `Nickname: "${oldMember.nickname || "None"}" → "${
         newMember.nickname || "None"
-      }"`
+      }"`,
     );
   }
 
@@ -5031,16 +5116,16 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       "🖼️ Server Avatar Changed",
       `**Old Avatar:** [Link](${oldAvatar})\n**New Avatar:** [Link](${newAvatar})`,
       newMember.user,
-      0x9b59b6
+      0x9b59b6,
     );
     await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
 
   const addedRoles = newMember.roles.cache.filter(
-    (role) => !oldMember.roles.cache.has(role.id)
+    (role) => !oldMember.roles.cache.has(role.id),
   );
   const removedRoles = oldMember.roles.cache.filter(
-    (role) => !newMember.roles.cache.has(role.id)
+    (role) => !newMember.roles.cache.has(role.id),
   );
 
   if (addedRoles.size > 0) {
@@ -5050,7 +5135,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       "🎭 Roles Claimed",
       `**Roles Added:** ${rolesList}`,
       newMember.user,
-      0x3498db
+      0x3498db,
     );
     await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
@@ -5061,7 +5146,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       "🎭 Roles Removed",
       `**Roles Removed:** ${rolesList}`,
       newMember.user,
-      0xe74c3c
+      0xe74c3c,
     );
     await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
@@ -5071,7 +5156,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
       "👤 Member Updated",
       changes.join("\n"),
       newMember.user,
-      0x95a5a6
+      0x95a5a6,
     );
     await logTrackingEvent(newMember.guild.id, null, embed, "member", null);
   }
@@ -5087,7 +5172,7 @@ client.on("userUpdate", async (oldUser, newUser) => {
 
   if (oldUser.discriminator !== newUser.discriminator) {
     changes.push(
-      `Discriminator: #${oldUser.discriminator} → #${newUser.discriminator}`
+      `Discriminator: #${oldUser.discriminator} → #${newUser.discriminator}`,
     );
   }
 
@@ -5103,7 +5188,7 @@ client.on("userUpdate", async (oldUser, newUser) => {
           "🖼️ Global Avatar Changed",
           `**Old Avatar:** [Link](${oldAvatar})\n**New Avatar:** [Link](${newAvatar})`,
           newUser,
-          0x9b59b6
+          0x9b59b6,
         );
         await logTrackingEvent(guildId, null, embed, "userUpdate", null);
       }
@@ -5122,7 +5207,7 @@ client.on("userUpdate", async (oldUser, newUser) => {
           "👤 User Profile Updated",
           changes.join("\n"),
           newUser,
-          0xf39c12
+          0xf39c12,
         );
         await logTrackingEvent(guildId, null, embed, "userUpdate", null);
       }
@@ -5140,28 +5225,28 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       "🔊 Voice Channel Joined",
       `**Channel:** <#${newState.channel.id}>`,
       member.user,
-      0x3498db
+      0x3498db,
     );
     await logTrackingEvent(
       newState.guild.id,
       null,
       embed,
       "voice",
-      newState.channel.id
+      newState.channel.id,
     );
   } else if (oldState.channel && !newState.channel) {
     const embed = createTrackingEmbed(
       "🔇 Voice Channel Left",
       `**Channel:** <#${oldState.channel.id}>`,
       member.user,
-      0x95a5a6
+      0x95a5a6,
     );
     await logTrackingEvent(
       oldState.guild.id,
       null,
       embed,
       "voice",
-      oldState.channel.id
+      oldState.channel.id,
     );
   } else if (
     oldState.channel &&
@@ -5172,14 +5257,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       "🔀 Voice Channel Switched",
       `**From:** <#${oldState.channel.id}>\n**To:** <#${newState.channel.id}>`,
       member.user,
-      0xf39c12
+      0xf39c12,
     );
     await logTrackingEvent(
       newState.guild.id,
       null,
       embed,
       "voice",
-      newState.channel.id
+      newState.channel.id,
     );
   }
 
@@ -5189,14 +5274,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       newState.serverMute ? "🔇 Server Muted" : "🔊 Server Unmuted",
       `**Status:** ${newState.serverMute ? "Muted" : "Unmuted"}`,
       member.user,
-      newState.serverMute ? 0xe74c3c : 0x2ecc71
+      newState.serverMute ? 0xe74c3c : 0x2ecc71,
     );
     await logTrackingEvent(
       newState.guild.id,
       null,
       embed,
       "voice",
-      newState.channel?.id || null
+      newState.channel?.id || null,
     );
   }
 
@@ -5205,14 +5290,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       newState.serverDeaf ? "🔇 Server Deafened" : "🔊 Server Undeafened",
       `**Status:** ${newState.serverDeaf ? "Deafened" : "Undeafened"}`,
       member.user,
-      newState.serverDeaf ? 0xe74c3c : 0x2ecc71
+      newState.serverDeaf ? 0xe74c3c : 0x2ecc71,
     );
     await logTrackingEvent(
       newState.guild.id,
       null,
       embed,
       "voice",
-      newState.channel?.id || null
+      newState.channel?.id || null,
     );
   }
 });
@@ -5232,14 +5317,14 @@ client.on("messageReactionAdd", async (reaction, user) => {
     "👍 Reaction Added",
     `**Reaction:** ${reaction.emoji}\n**Channel:** <#${reaction.message.channel.id}>\n**Message:** [Jump to message](${reaction.message.url})`,
     user,
-    0x3498db
+    0x3498db,
   );
   await logTrackingEvent(
     reaction.message.guild.id,
     null,
     embed,
     "reaction",
-    reaction.message.channel.id
+    reaction.message.channel.id,
   );
 });
 
@@ -5257,14 +5342,14 @@ client.on("messageReactionRemove", async (reaction, user) => {
     "👎 Reaction Removed",
     `**Reaction:** ${reaction.emoji}\n**Channel:** <#${reaction.message.channel.id}>\n**Message:** [Jump to message](${reaction.message.url})`,
     user,
-    0x95a5a6
+    0x95a5a6,
   );
   await logTrackingEvent(
     reaction.message.guild.id,
     null,
     embed,
     "reaction",
-    reaction.message.channel.id
+    reaction.message.channel.id,
   );
 });
 
@@ -5276,7 +5361,7 @@ client.on("channelCreate", async (channel) => {
     .setDescription(
       `**Channel:** <#${channel.id}>\n**Type:** ${
         channel.type
-      }\n**Created:** <t:${Math.floor(Date.now() / 1000)}:F>`
+      }\n**Created:** <t:${Math.floor(Date.now() / 1000)}:F>`,
     )
     .setColor(0x2ecc71)
     .setTimestamp();
@@ -5291,7 +5376,7 @@ client.on("channelDelete", async (channel) => {
     .setDescription(
       `**Channel:** ${channel.name}\n**Type:** ${
         channel.type
-      }\n**Deleted:** <t:${Math.floor(Date.now() / 1000)}:F>`
+      }\n**Deleted:** <t:${Math.floor(Date.now() / 1000)}:F>`,
     )
     .setColor(0xe74c3c)
     .setTimestamp();
@@ -5308,7 +5393,7 @@ client.on("channelUpdate", async (oldChannel, newChannel) => {
   }
   if (oldChannel.topic !== newChannel.topic) {
     changes.push(
-      `Topic: "${oldChannel.topic || "None"}" → "${newChannel.topic || "None"}"`
+      `Topic: "${oldChannel.topic || "None"}" → "${newChannel.topic || "None"}"`,
     );
   }
 
@@ -5318,7 +5403,7 @@ client.on("channelUpdate", async (oldChannel, newChannel) => {
       .setDescription(
         `**Channel:** <#${newChannel.id}>\n${changes
           .map((c) => `• ${c}`)
-          .join("\n")}`
+          .join("\n")}`,
       )
       .setColor(0xf39c12)
       .setTimestamp();
@@ -5327,7 +5412,7 @@ client.on("channelUpdate", async (oldChannel, newChannel) => {
       null,
       embed,
       "channelUpdates",
-      newChannel.id
+      newChannel.id,
     );
   }
 });
@@ -5340,7 +5425,7 @@ client.on("roleCreate", async (role) => {
     .setDescription(
       `**Role:** <@&${role.id}>\n**Color:** ${
         role.hexColor
-      }\n**Mentionable:** ${role.mentionable ? "Yes" : "No"}`
+      }\n**Mentionable:** ${role.mentionable ? "Yes" : "No"}`,
     )
     .setColor(0x2ecc71)
     .setTimestamp();
@@ -5373,7 +5458,7 @@ client.on("roleUpdate", async (oldRole, newRole) => {
     changes.push(
       `Mentionable: ${oldRole.mentionable ? "Yes" : "No"} → ${
         newRole.mentionable ? "Yes" : "No"
-      }`
+      }`,
     );
   }
 
@@ -5383,7 +5468,7 @@ client.on("roleUpdate", async (oldRole, newRole) => {
       .setDescription(
         `**Role:** <@&${newRole.id}>\n${changes
           .map((c) => `• ${c}`)
-          .join("\n")}`
+          .join("\n")}`,
       )
       .setColor(0xf39c12)
       .setTimestamp();
@@ -5411,7 +5496,7 @@ client.on("guildUpdate", async (oldGuild, newGuild) => {
       .setDescription(
         `**Guild:** ${newGuild.name}\n${changes
           .map((c) => `• ${c}`)
-          .join("\n")}`
+          .join("\n")}`,
       )
       .setColor(0x9b59b6)
       .setTimestamp();
@@ -5425,7 +5510,7 @@ client.on("threadCreate", async (thread) => {
   const embed = new EmbedBuilder()
     .setTitle("➕ Thread Created")
     .setDescription(
-      `**Thread:** <#${thread.id}>\n**Parent:** <#${thread.parentId}>\n**Type:** ${thread.type}`
+      `**Thread:** <#${thread.id}>\n**Parent:** <#${thread.parentId}>\n**Type:** ${thread.type}`,
     )
     .setColor(0x2ecc71)
     .setTimestamp();
@@ -5449,8 +5534,8 @@ client.on("guildScheduledEventCreate", async (event) => {
     .setTitle("📅 Scheduled Event Created")
     .setDescription(
       `**Event:** ${event.name}\n**Time:** <t:${Math.floor(
-        event.scheduledStartTimestamp / 1000
-      )}:F>`
+        event.scheduledStartTimestamp / 1000,
+      )}:F>`,
     )
     .setColor(0x3498db)
     .setTimestamp();
@@ -5481,7 +5566,7 @@ client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
       .setDescription(
         `**Event:** ${newEvent.name}\n${changes
           .map((c) => `• ${c}`)
-          .join("\n")}`
+          .join("\n")}`,
       )
       .setColor(0xf39c12)
       .setTimestamp();
@@ -5490,7 +5575,7 @@ client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
       null,
       embed,
       "scheduledEvents",
-      null
+      null,
     );
   }
 });
@@ -5540,7 +5625,7 @@ client.on("stickerUpdate", async (oldSticker, newSticker) => {
       .setDescription(
         `**Sticker:** ${newSticker.name}\n${changes
           .map((c) => `• ${c}`)
-          .join("\n")}`
+          .join("\n")}`,
       )
       .setColor(0xf39c12)
       .setTimestamp();
@@ -5554,7 +5639,7 @@ client.on("inviteCreate", async (invite) => {
   const embed = new EmbedBuilder()
     .setTitle("➕ Invite Created")
     .setDescription(
-      `**Channel:** <#${invite.channelId}>\n**Code:** \`${invite.code}\`\n**Creator:** ${invite.inviter}`
+      `**Channel:** <#${invite.channelId}>\n**Code:** \`${invite.code}\`\n**Creator:** ${invite.inviter}`,
     )
     .setColor(0x2ecc71)
     .setTimestamp();
@@ -5563,7 +5648,7 @@ client.on("inviteCreate", async (invite) => {
     null,
     embed,
     "invites",
-    invite.channelId
+    invite.channelId,
   );
 });
 
@@ -5590,7 +5675,7 @@ client.on("stageInstanceCreate", async (stage) => {
     null,
     embed,
     "stageInstances",
-    stage.channelId
+    stage.channelId,
   );
 });
 
@@ -5621,7 +5706,7 @@ client.on("stageInstanceUpdate", async (oldStage, newStage) => {
       null,
       embed,
       "stageInstances",
-      null
+      null,
     );
   }
 });
@@ -5643,7 +5728,7 @@ client.on("guildBanRemove", async (ban) => {
 // Track when bot joins a server
 client.on("guildCreate", async (guild) => {
   logger.log(
-    `🎉 [BOT JOIN] Bot joined new server: ${guild.name} (${guild.id})`
+    `🎉 [BOT JOIN] Bot joined new server: ${guild.name} (${guild.id})`,
   );
   logger.log(`   Members: ${guild.memberCount}`);
   logger.log(`   Owner: ${(await guild.fetchOwner()).user.tag}`);
@@ -5652,7 +5737,7 @@ client.on("guildCreate", async (guild) => {
 // Track when bot leaves a server
 client.on("guildDelete", async (guild) => {
   logger.log(
-    `👋 [BOT LEAVE] Bot removed from server: ${guild.name} (${guild.id})`
+    `👋 [BOT LEAVE] Bot removed from server: ${guild.name} (${guild.id})`,
   );
 });
 
@@ -5710,7 +5795,7 @@ guideOpened = true;
 if (!process.env.DISCORD_TOKEN) {
   logger.error("❌ DISCORD_TOKEN is not set in the .env file");
   logger.log(
-    "Please check your .env file and ensure DISCORD_TOKEN is correctly set"
+    "Please check your .env file and ensure DISCORD_TOKEN is correctly set",
   );
   process.exit(1);
 }
@@ -5719,7 +5804,7 @@ try {
   client.login(process.env.DISCORD_TOKEN).catch((error) => {
     logger.error("❌ Unable to login bot:", error);
     logger.log(
-      "Please check if your DISCORD_TOKEN is correctly set in the .env file"
+      "Please check if your DISCORD_TOKEN is correctly set in the .env file",
     );
 
     // Only open guide if it wasn't already opened
@@ -5735,7 +5820,7 @@ try {
 } catch (syncError) {
   logger.error("❌ Synchronous error during login:", syncError);
   logger.log(
-    "This might indicate an issue with the Discord.js setup or token format"
+    "This might indicate an issue with the Discord.js setup or token format",
   );
   setTimeout(() => process.exit(1), 2000);
 }
